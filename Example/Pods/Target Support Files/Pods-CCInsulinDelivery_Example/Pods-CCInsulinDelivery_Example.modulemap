@@ -1,0 +1,6 @@
+framework module Pods_CCInsulinDelivery_Example {
+  umbrella header "Pods-CCInsulinDelivery_Example-umbrella.h"
+
+  export *
+  module * { export * }
+}
