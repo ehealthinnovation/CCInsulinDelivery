@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'CCInsulinDelivery_Example' do
+  pod 'CCInsulinDelivery', :path => '../'
+
+  target 'CCInsulinDelivery_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
