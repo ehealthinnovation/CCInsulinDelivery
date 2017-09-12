@@ -102,10 +102,14 @@ strip_invalid_archs() {
 
 
 if [[ "$CONFIGURATION" == "Debug" ]]; then
+  install_framework "${BUILT_PRODUCTS_DIR}/CCBluetooth/CCBluetooth.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CCInsulinDelivery/CCInsulinDelivery.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/CCToolbox/CCToolbox.framework"
 fi
 if [[ "$CONFIGURATION" == "Release" ]]; then
+  install_framework "${BUILT_PRODUCTS_DIR}/CCBluetooth/CCBluetooth.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/CCInsulinDelivery/CCInsulinDelivery.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/CCToolbox/CCToolbox.framework"
 fi
 if [ "${COCOAPODS_PARALLEL_CODE_SIGN}" == "true" ]; then
   wait

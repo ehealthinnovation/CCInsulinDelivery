@@ -1,5 +1,5 @@
 //
-//  ViewController.swift
+//  DiscoveryViewController.swift
 //  CCInsulinDelivery
 //
 //  Created by ktallevi on 09/11/2017.
@@ -8,7 +8,7 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class DiscoveryViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()

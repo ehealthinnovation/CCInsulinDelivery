@@ -2,10 +2,12 @@ use_frameworks!
 
 target 'CCInsulinDelivery_Example' do
   pod 'CCInsulinDelivery', :path => '../'
+  pod 'CCBluetooth', :git => 'https://github.com/uhnmdi/CCBluetooth.git'
+  pod 'CCToolbox', :git => 'https://github.com/uhnmdi/CCToolbox.git'
 
   target 'CCInsulinDelivery_Tests' do
     inherit! :search_paths
 
-    
+
   end
 end
