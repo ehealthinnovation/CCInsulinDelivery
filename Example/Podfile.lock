@@ -1,7 +1,9 @@
 PODS:
   - CCBluetooth (0.5.8):
     - CCToolbox
-  - CCInsulinDelivery (0.1.0)
+  - CCInsulinDelivery (0.1.0):
+    - CCBluetooth
+    - CCToolbox
   - CCToolbox (0.7.5)
 
 DEPENDENCIES:
@@ -27,7 +29,7 @@ CHECKOUT OPTIONS:
 
 SPEC CHECKSUMS:
   CCBluetooth: cc605544b86213b99de03976dc57dae8a7660e4e
-  CCInsulinDelivery: fed5adfa2d3abd90bc1cc5c572ef11631a4468c8
+  CCInsulinDelivery: 77f6aba089e49bcbc5d22ae7f202cf627024df40
   CCToolbox: 18160066f8732de14e931394aa7181fe56a28075
 
 PODFILE CHECKSUM: 3e4faa9ef2cd767e17b11c563d315a1cf4bb70a1
