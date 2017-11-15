@@ -48,18 +48,19 @@ public class IDSFeatures : NSObject {
     public var targetGlucoseRangeProfileTemplateSupported: Bool?
     public var insulinOnBoardSupported: Bool?
     public var featureExtension: Bool?
-    public var glucoseConcentration: Float?
-    
+    public var insulinConcentration: Float?
     
     public init(data: NSData?) {
+        super.init()
         print("IDSFeatures#init - \(String(describing: data))")
         
-        let featureBytes = (data?.subdata(with: NSRange(location:1, length: 2)) as NSData!)
+        let packet = self.reverseData(data: data!)
+        let featureBytes = (packet.subdata(with: NSRange(location:1, length: 2)) as NSData!)
         var featureBits:Int = 0
         featureBytes?.getBytes(&featureBits, length: MemoryLayout<UInt32>.size)
         
-        let glucoseConcentrationBytes = (data?.subdata(with: NSRange(location:3, length: 2)) as NSData!)
-        glucoseConcentration = glucoseConcentrationBytes!.shortFloatToFloat()
+        let insulinConcentrationBytes = (data?.subdata(with: NSRange(location:3, length: 2)) as NSData!)
+        insulinConcentration = insulinConcentrationBytes!.shortFloatToFloat()
         
         e2eProtectionSupported = featureBits.bit(e2eProtectionSupportedBit).toBool()
         basalRateSupported = featureBits.bit(basalRateSupportedBit).toBool()
@@ -78,5 +79,15 @@ public class IDSFeatures : NSObject {
         targetGlucoseRangeProfileTemplateSupported = featureBits.bit(targetGlucoseRangeProfileTemplateSupportedBit).toBool()
         insulinOnBoardSupported = featureBits.bit(insulinOnBoardSupportedBit).toBool()
         featureExtension = featureBits.bit(featureExtensionBit).toBool()
+    }
+    
+    //move to CCToolbox
+    func reverseData(data:NSData) -> NSData {
+        let packet = NSMutableData()
+        for index in (0 ..< data.length).reversed() {
+            packet.append((data.subdata(with: NSRange(location: index, length: 1))))
+        }
+        
+        return packet
     }
 }

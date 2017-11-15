@@ -19,6 +19,7 @@ var thisIDS : IDS?
     func IDSFeatures(features: IDSFeatures)
     func IDSStatusChanged(statusChanged: IDSStatusChanged)
     func IDSStatusUpdate(status: IDSStatus)
+    func IDSAnnunciationStatusUpdate(annunciation: IDSAnnunciationStatus)
 }
 
 @objc public protocol IDSDiscoveryProtocol {
@@ -45,6 +46,7 @@ public class IDS : NSObject {
     public var idsFeatures: IDSFeatures!
     public var idsStatusChanged: IDSStatusChanged!
     public var idsStatus: IDSStatus!
+    public var idsAnnunciation: IDSAnnunciationStatus!
     
     var peripheralNameToConnectTo : String?
     var servicesAndCharacteristics : [String: [CBCharacteristic]] = [:]
@@ -100,6 +102,22 @@ public class IDS : NSObject {
         idsDelegate?.IDSStatusUpdate(status: self.idsStatus)
     }
     
+    func parseIDSAnnunciation(data: NSData) {
+        print("parseIDSAnnunciation")
+        self.idsAnnunciation = IDSAnnunciationStatus(data: data)
+        idsDelegate?.IDSAnnunciationStatusUpdate(annunciation: self.idsAnnunciation)
+    }
+
+    func parseIDSStatusReaderControlPointCharacteristic(data: NSData) {
+        print("parseIDSStatusReaderControlPointCharacteristic")
+        IDSStatusReaderControlPoint.sharedInstance().parseIDSStatusReaderControlPointResponse(data: data)
+    }
+    
+    func parseIDSCommandDataCharacteristic(data: NSData) {
+        print("parseIDSCommandDataCharacteristic")
+        IDSCommandData.sharedInstance().parseIDSCommandDataResponse(data: data)
+    }
+
     func crcIsValid(data: NSData) -> Bool {
         let packet = (data.subdata(with: NSRange(location:0, length: data.length - 2)) as NSData!)
         let packetCRC = (data.subdata(with: NSRange(location:data.length - 2, length: 2)) as NSData!)
@@ -108,8 +126,22 @@ public class IDS : NSObject {
         if packetCRC == calculatedCRC {
             return true
         }
+        print("Invalid CRC")
+        print("Calculated CRC: \(String(describing: calculatedCRC)) , Packet CRC: \(String(describing: packetCRC))")
         
-        print("crc is invalid")
+        return false
+    }
+    
+    func featureCRCIsValid(data: NSData) -> Bool {
+        let packet = (data.subdata(with: NSRange(location:2, length: data.length - 2)) as NSData!)
+        let packetCRC = (data.subdata(with: NSRange(location:0, length: 2)) as NSData!)
+        let calculatedCRC: NSData = (packet?.crcMCRF4XX)!
+        
+        if packetCRC == calculatedCRC {
+            return true
+        }
+        print("Invalid CRC")
+        print("Calculated CRC: \(String(describing: calculatedCRC)) , Packet CRC: \(String(describing: packetCRC))")
         
         return false
     }
@@ -162,12 +194,16 @@ extension IDS: BluetoothPeripheralProtocol {
         self.peripheral = cbPeripheral
         idsDelegate?.IDSConnected(ids: cbPeripheral)
         
+        IDSStatusReaderControlPoint.sharedInstance().peripheral = cbPeripheral
+        IDSCommandControlPoint.sharedInstance().peripheral = cbPeripheral
         Bluetooth.sharedInstance().discoverAllServices(cbPeripheral)
     }
     
     public func didDisconnectPeripheral(_ cbPeripheral: CBPeripheral) {
         print("IDS#didDisconnectPeripheral")
         self.peripheral = nil
+        IDSStatusReaderControlPoint.sharedInstance().peripheral = nil
+        IDSCommandControlPoint.sharedInstance().peripheral = nil
         idsDelegate?.IDSDisconnected(ids: cbPeripheral)
     }
 }
@@ -182,9 +218,11 @@ extension IDS: BluetoothServiceProtocol {
         servicesAndCharacteristics[service.uuid.uuidString] = service.characteristics
         
         for characteristic in service.characteristics! {
-            print("reading characteristic \(characteristic.uuid.uuidString)")
-            DispatchQueue.global(qos: .background).async {
-                self.peripheral?.readValue(for: characteristic)
+            if characteristic.properties.contains(CBCharacteristicProperties.read) {
+                print("reading characteristic \(characteristic.uuid.uuidString)")
+                DispatchQueue.global(qos: .background).async {
+                    self.peripheral?.readValue(for: characteristic)
+                }
             }
         }
     }
@@ -195,7 +233,7 @@ extension IDS: BluetoothCharacteristicProtocol {
         print("IDS#didUpdateValueForCharacteristic: \(characteristic) value:\(String(describing: characteristic.value))")
         
         if(characteristic.uuid.uuidString == idsFeaturesCharacteristic) {
-            if(crcIsValid(data: characteristic.value! as NSData)) {
+            if(featureCRCIsValid(data: characteristic.value! as NSData)) {
                 self.parseFeaturesResponse(data: characteristic.value! as NSData)
             }
         }
@@ -209,6 +247,21 @@ extension IDS: BluetoothCharacteristicProtocol {
                 self.parseIDSStatus(data: characteristic.value! as NSData)
             }
         }
+        if(characteristic.uuid.uuidString == idsAnnunciationStatusCharacteristic) {
+            if(crcIsValid(data: characteristic.value! as NSData)) {
+                self.parseIDSAnnunciation(data: characteristic.value! as NSData)
+            }
+        }
+        if(characteristic.uuid.uuidString == idsStatusReaderControlPointCharacteristic) {
+            if(crcIsValid(data: characteristic.value! as NSData)) {
+                self.parseIDSStatusReaderControlPointCharacteristic(data: characteristic.value! as NSData)
+            }
+        }
+        if(characteristic.uuid.uuidString == idsCommandDataCharacteristic) {
+            if(crcIsValid(data: characteristic.value! as NSData)) {
+                self.parseIDSCommandDataCharacteristic(data: characteristic.value! as NSData)
+            }
+        }
     }
     
     public func didUpdateNotificationStateFor(_ characteristic:CBCharacteristic) {
@@ -218,4 +271,3 @@ extension IDS: BluetoothCharacteristicProtocol {
     public func didWriteValueForCharacteristic(_ cbPeripheral: CBPeripheral, didWriteValueFor descriptor:CBDescriptor) {
     }
 }
-

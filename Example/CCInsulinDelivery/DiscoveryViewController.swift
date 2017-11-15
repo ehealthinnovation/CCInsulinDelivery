@@ -30,7 +30,7 @@ class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol {
         IDS.sharedInstance().idsDiscoveryDelegate = self
     }
     
-    func onRefresh() {
+    @objc func onRefresh() {
         refreshControl?.endRefreshing()
         discoveredIDSDevices.removeAll()
         
