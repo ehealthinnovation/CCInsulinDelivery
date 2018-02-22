@@ -18,8 +18,8 @@ class IDSViewController: UITableViewController, IDSProtocol {
     var idsStatusChanged: IDSStatusChanged!
     var idsStatus: IDSStatus!
     var idsAnnunciationStatus: IDSAnnunciationStatus!
-    //var idsStatusReaderControlPoint: IDSStatusReaderControlPoint!
     var peripheral : CBPeripheral!
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,6 +29,7 @@ class IDSViewController: UITableViewController, IDSProtocol {
         //idsStatusReaderControlPoint.idsStatusReaderControlPointDelegate = self
         IDSStatusReaderControlPoint.sharedInstance().idsStatusReaderControlPointDelegate = self
         IDSCommandData.sharedInstance().idsCommandDataDelegate = self
+        IDSCommandControlPoint.sharedInstance().idsCommandControlPointDelegate = self
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -58,7 +59,7 @@ class IDSViewController: UITableViewController, IDSProtocol {
             
             alert.addAction(UIAlertAction(title: buttonTitle, style: .default) { (action:UIAlertAction!) in
                 print(buttonTitle + " selected")
-                IDSStatusReaderControlPoint.sharedInstance().getActiveBolusDelivery(bolusID: UInt16(buttonTitle)!)
+                IDSCommandControlPoint.sharedInstance().cancelBolus(bolusID: UInt16(buttonTitle)!)
             })
         }
         self.present(alert, animated: true)
@@ -76,6 +77,38 @@ class IDSViewController: UITableViewController, IDSProtocol {
             })
         }
         self.present(alert, animated: true)
+    }
+    
+    func selectTemplate(_ title: String, message: String, templateType: UInt8, completion: @escaping (_ value: UInt8?)->Void) {
+        if IDSCommandData.sharedInstance().templatesStatusAndDetails.count == 0 {
+            showAlert(title: "No stored template statuses", message: "Get template status and details first!")
+            return
+        }
+        
+        let alertController = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
+        let cancelButton = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        
+        for template in IDSCommandData.sharedInstance().templatesStatusAndDetails {
+            if templateType == 0 {
+                let actionTitle = String(format: "Template Number: %d\nConfigurable: %@\nConfigured: %@", template.templateNumber, template.configurable.description, template.configured.description)
+                let action = UIAlertAction(title: actionTitle,
+                                           style: UIAlertActionStyle.default,
+                                           handler: { void in completion(template.templateNumber)})
+                alertController.addAction(action)
+            } else if template.templateType == templateType {
+                let actionTitle = String(format: "Template Number: %d\nConfigurable: %@\nConfigured: %@", template.templateNumber, template.configurable.description, template.configured.description)
+                let action = UIAlertAction(title: actionTitle,
+                                       style: UIAlertActionStyle.default,
+                                       handler: { void in completion(template.templateNumber)})
+                alertController.addAction(action)
+            }
+        }
+        alertController.addAction(cancelButton)
+        
+        self.navigationController!.present(alertController, animated: true, completion: nil)
+        UILabel.appearance(whenContainedInInstancesOf: [UIAlertController.self]).numberOfLines = 4
+        UILabel.appearance(whenContainedInInstancesOf: [UIAlertController.self]).font = UIFont.systemFont(ofSize: 8.0)
+        //UILabel.appearance(whenContainedInInstancesOf: [UIAlertController.self]).textAlignment = .left
     }
     
     // IDSProtocol
@@ -125,11 +158,6 @@ class IDSViewController: UITableViewController, IDSProtocol {
             }
             self.showAlert(title: "Active Bolus ID's", message: activeBolusIDSStr)
         }
-        
-        //let alertController = UIAlertController(title: "Response", message: activeBolusIDSStr, preferredStyle: .actionSheet)
-        //let OKAction = UIAlertAction(title: "OK", style: .default)
-        //alertController.addAction(OKAction)
-        //self.present(alertController, animated: true)
     }
     
     // MARK: - UITableViewDataSource
@@ -167,6 +195,10 @@ class IDSViewController: UITableViewController, IDSProtocol {
             return 8
         case 5:
             return 31
+        case 6:
+            return 13
+        case 7:
+            return 1
         default:
             return 0
         }
@@ -320,11 +352,12 @@ class IDSViewController: UITableViewController, IDSProtocol {
                 }
                 cell.detailTextLabel!.text = "Reset Status"
             case 1:
-                if IDSStatusReaderControlPoint.sharedInstance().activeBolusIDS.count != 0 {
+                /*if IDSStatusReaderControlPoint.sharedInstance().activeBolusIDS.count != 0 {
                     cell.textLabel!.text = "Tap for response details"
                 } else {
                     cell.textLabel!.text = ""
-                }
+                }*/
+                cell.textLabel!.text = ""
                 cell.detailTextLabel!.text = "Get Active Bolus IDs"
             case 2:
                 cell.textLabel!.text = ""
@@ -351,20 +384,22 @@ class IDSViewController: UITableViewController, IDSProtocol {
         case 5:
             switch indexPath.row {
             case 0:
-                if IDSCommandData.sharedInstance().therapyControlState != nil {
+                /*if IDSCommandData.sharedInstance().therapyControlState != nil {
                     let therapyControlState = IDSCommandControlPoint.ResponseCodes(rawValue: IDSCommandData.sharedInstance().therapyControlState!)?.description
                     cell.textLabel!.text = therapyControlState!
                 } else {
                     cell.textLabel!.text = ""
-                }
+                }*/
+                cell.textLabel!.text = ""
                 cell.detailTextLabel!.text = "Set Therapy Control State"
             case 1:
-                if IDSCommandData.sharedInstance().flightModeStatus != nil {
+                /*if IDSCommandData.sharedInstance().flightModeStatus != nil {
                     let flightModeStatus = IDSCommandControlPoint.ResponseCodes(rawValue: IDSCommandData.sharedInstance().flightModeStatus!)?.description
                     cell.textLabel!.text = flightModeStatus!
                 } else {
                     cell.textLabel!.text = ""
-                }
+                }*/
+                cell.textLabel!.text = ""
                 cell.detailTextLabel!.text = "Set Flight Mode"
             case 2:
                 cell.textLabel!.text = ""
@@ -454,19 +489,71 @@ class IDSViewController: UITableViewController, IDSProtocol {
                 cell.textLabel!.text = ""
                 cell.detailTextLabel!.text = "Set Max Bolus Amount"
             default:
-                cell.textLabel!.text = ""
-                cell.detailTextLabel!.text = ""
+                ()
+            }
+        case 6:
+            switch(indexPath.row) {
+                case 0:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Number Of All Stored Records"
+                case 1:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Report All Records"
+                case 2:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Report Records Greater Than Or Equal To"
+                case 3:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Report Records Less Than Or Equal To"
+                case 4:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Report Records Within Range"
+                case 5:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Report First Record"
+                case 6:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Report Last Record"
+                case 7:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Delete All Records"
+                case 8:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Delete Records Greater Than Or Equal To"
+                case 9:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Delete Records Less Than Or Equal To"
+                case 10:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Delete Records Within Range"
+                case 11:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Delete First Record"
+                case 12:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Delete Last Record"
+                default:
+                    ()
+            }
+        case 7:
+            switch(indexPath.row) {
+                case 0:
+                    cell.textLabel!.text = ""
+                    cell.detailTextLabel!.text = "Set current time"
+                default:
+                    ()
             }
         default:
-            cell.textLabel!.text = ""
-            cell.detailTextLabel!.text = ""
+            ()
         }
         
         return cell
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
-        return 6
+        return 7 +
+            IDS.sharedInstance().currentTimeServiceSupported.intValue +
+            IDS.sharedInstance().batteryServiceSupported.intValue
     }
     
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
@@ -487,10 +574,16 @@ class IDSViewController: UITableViewController, IDSProtocol {
             return "IDS Status Reader Control Point"
         case 5:
             return "IDS Command Control Point"
+        case 6:
+            return "Record Access Control Point"
+        case 7:
+            return "Current Date Time"
         default:
             return ""
         }
     }
+    
+    
     
     //MARK: - table delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -503,14 +596,15 @@ class IDSViewController: UITableViewController, IDSProtocol {
                     case 0:
                         IDSStatusReaderControlPoint.sharedInstance().resetSensorStatus()
                     case 1:
-                        if IDSStatusReaderControlPoint.sharedInstance().activeBolusIDS.count == 0 {
+                        IDSStatusReaderControlPoint.sharedInstance().getActiveBolusIDs()
+                        /*if IDSStatusReaderControlPoint.sharedInstance().activeBolusIDS.count == 0 {
                             IDSStatusReaderControlPoint.sharedInstance().getActiveBolusIDs()
                         } else {
                             self.showActiveBolusIDS()
-                        }
+                        }*/
                     case 2:
                         if IDSStatusReaderControlPoint.sharedInstance().activeBolusIDS.count > 0 {
-                            self.bolusSelectionAlert()
+                            //self.bolusSelectionAlert()
                         } else {
                             self.showAlert(title: "Message", message: "Get active bolus ID's first")
                         }
@@ -534,37 +628,80 @@ class IDSViewController: UITableViewController, IDSProtocol {
                     case 1:
                         IDSCommandControlPoint.sharedInstance().setFlightMode()
                     case 2:
-                        IDSCommandControlPoint.sharedInstance().snoozeAnnunciation()
+                        IDSCommandControlPoint.sharedInstance().snoozeAnnunciation(annunciation: self.idsAnnunciationStatus.annunciationInstanceID)
                     case 3:
-                        IDSCommandControlPoint.sharedInstance().confirmAnnunciation()
+                        IDSCommandControlPoint.sharedInstance().confirmAnnunciation(annunciation: self.idsAnnunciationStatus.annunciationInstanceID)
                     case 4:
-                        IDSCommandControlPoint.sharedInstance().readBasalRateProfileTemplate()
+                        selectTemplate("Basal Rate Profile Templates", message: "", templateType: TemplateType.basalRateProfileTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().readBasalRateProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 5:
-                        IDSCommandControlPoint.sharedInstance().writeBasalRateProfileTemplate()
+                        selectTemplate("Basal Rate Profile Templates", message: "", templateType: TemplateType.basalRateProfileTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().writeBasalRateProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 6:
                         IDSCommandControlPoint.sharedInstance().setTBRAdjustment()
                     case 7:
                         IDSCommandControlPoint.sharedInstance().cancelTBRAdjustment()
                     case 8:
-                        IDSCommandControlPoint.sharedInstance().getTBRTemplate()
+                        selectTemplate("TBR Templates", message: "", templateType: TemplateType.tbrTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().getTBRTemplate(templateNumber: value)
+                            }
+                        }
                     case 9:
-                        IDSCommandControlPoint.sharedInstance().setTBRTemplate()
+                        selectTemplate("TBR Templates", message: "", templateType: TemplateType.tbrTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().setTBRTemplate(templateNumber: value)
+                            }
+                        }
                     case 10:
                         IDSCommandControlPoint.sharedInstance().setBolus()
                     case 11:
-                        IDSCommandControlPoint.sharedInstance().cancelBolus()
+                        if(Int(IDSStatusReaderControlPoint.sharedInstance().activeBolusIDS.count) > 0) {
+                            //IDSCommandControlPoint.sharedInstance().cancelBolus()
+                            self.bolusSelectionAlert()
+                        } else {
+                            showAlert(title: "Cancel Bolus", message: "Get Active Bolus IDs first")
+                        }
                     case 12:
                         IDSCommandControlPoint.sharedInstance().getAvailableBoluses()
                     case 13:
-                        IDSCommandControlPoint.sharedInstance().getBolusTemplate()
+                        selectTemplate("Bolus Templates", message: "", templateType: TemplateType.bolusTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().getBolusTemplate(templateNumber: value)
+                            }
+                        }
                     case 14:
-                        IDSCommandControlPoint.sharedInstance().setBolusTemplate()
+                        selectTemplate("Bolus Templates", message: "", templateType: TemplateType.bolusTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().setBolusTemplate(templateNumber: value)
+                            }
+                        }
                     case 15:
                         IDSCommandControlPoint.sharedInstance().getTemplateStatusAndDetails()
                     case 16:
-                        IDSCommandControlPoint.sharedInstance().resetTemplateStatus()
+                        //IDSCommandControlPoint.sharedInstance().resetTemplateStatus(templatesNumbers: [1,2,3])
+                        selectTemplate("Available Templates", message: "", templateType: 0) { (value) -> Void in
+                            if let value = value {
+                                var templates:[UInt8] = []
+                                templates.append(value)
+                                IDSCommandControlPoint.sharedInstance().resetTemplateStatus(templatesNumbers: templates)
+                            }
+                    }
                     case 17:
-                        IDSCommandControlPoint.sharedInstance().activateProfileTemplates()
+                        //IDSCommandControlPoint.sharedInstance().activateProfileTemplates(templatesNumbers: [1,2,3])
+                        selectTemplate("Available Templates", message: "", templateType: 0) { (value) -> Void in
+                            if let value = value {
+                                var templates:[UInt8] = []
+                                templates.append(value)
+                                IDSCommandControlPoint.sharedInstance().activateProfileTemplates(templatesNumbers: templates)
+                            }
+                        }
                     case 18:
                         IDSCommandControlPoint.sharedInstance().getActivatedProfileTemplates()
                     case 19:
@@ -576,23 +713,85 @@ class IDSViewController: UITableViewController, IDSProtocol {
                     case 22:
                         IDSCommandControlPoint.sharedInstance().resetReservoirInsulinOperationTime()
                     case 23:
-                        IDSCommandControlPoint.sharedInstance().readISFProfileTemplate()
+                        selectTemplate("ISF Templates", message: "", templateType: TemplateType.isfProfileTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().readISFProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 24:
-                        IDSCommandControlPoint.sharedInstance().writeISFProfileTemplate()
+                        selectTemplate("ISF Templates", message: "", templateType: TemplateType.isfProfileTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().writeISFProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 25:
-                        IDSCommandControlPoint.sharedInstance().readI2CHORatioProfileTemplate()
+                        selectTemplate("I2CHO Templates", message: "", templateType: TemplateType.i2choTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().readI2CHORatioProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 26:
-                        IDSCommandControlPoint.sharedInstance().writeI2CHORatioProfileTemplate()
+                        selectTemplate("I2CHO Templates", message: "", templateType: TemplateType.i2choTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().writeI2CHORatioProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 27:
-                        IDSCommandControlPoint.sharedInstance().readTargetGlucoseRangeProfileTemplate()
+                        selectTemplate("Target Glucose Range Profile Templates", message: "", templateType: TemplateType.targetGlucoseTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().readTargetGlucoseRangeProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 28:
-                        IDSCommandControlPoint.sharedInstance().writeTargetGlucoseRangeProfileTemplate()
+                        selectTemplate("Target Glucose Range Profile Templates", message: "", templateType: TemplateType.targetGlucoseTemplate.rawValue) { (value) -> Void in
+                            if let value = value {
+                                IDSCommandControlPoint.sharedInstance().writeTargetGlucoseRangeProfileTemplate(templateNumber: value)
+                            }
+                        }
                     case 29:
                         IDSCommandControlPoint.sharedInstance().getMaxBolusAmount()
                     case 30:
-                        IDSCommandControlPoint.sharedInstance().setMaxBolusAmount()
+                        IDSCommandControlPoint.sharedInstance().setMaxBolusAmount(maxBolusAmount: 9.0)
                     default:
                         ()
+            }
+            case 6:
+                switch(indexPath.row) {
+                    case 0:
+                        IDSRecordAccessControlPoint.sharedInstance().reportNumberOfAllStoredRecords()
+                    case 1:
+                        IDSRecordAccessControlPoint.sharedInstance().reportAllRecords()
+                    case 2:
+                        IDSRecordAccessControlPoint.sharedInstance().reportRecordsGreaterThanOrEqualTo(recordNumber: 1)
+                    case 3:
+                        IDSRecordAccessControlPoint.sharedInstance().reportRecordsLessThanOrEqualTo(recordNumber: 5)
+                    case 4:
+                        IDSRecordAccessControlPoint.sharedInstance().reportRecordsWithinRange(from: 1, to: 5)
+                    case 5:
+                        IDSRecordAccessControlPoint.sharedInstance().reportFirstRecord()
+                    case 6:
+                        IDSRecordAccessControlPoint.sharedInstance().reportLastRecord()
+                    case 7:
+                        IDSRecordAccessControlPoint.sharedInstance().deleteAllRecords()
+                    case 8:
+                        IDSRecordAccessControlPoint.sharedInstance().deleteRecordsGreaterThanOrEqualTo(recordNumber: 1)
+                    case 9:
+                        IDSRecordAccessControlPoint.sharedInstance().deleteRecordsLessThanOrEqualTo(recordNumber: 5)
+                    case 10:
+                        IDSRecordAccessControlPoint.sharedInstance().deleteRecordsWithinRange(from: 1, to: 5)
+                    case 11:
+                        IDSRecordAccessControlPoint.sharedInstance().deleteFirstRecord()
+                    case 12:
+                        IDSRecordAccessControlPoint.sharedInstance().deleteLastRecord()
+                    default:
+                        ()
+                }
+            case 7:
+                switch(indexPath.row) {
+                    case 0:
+                        IDSDateTime.sharedInstance().writeCurrentDateTime()
+                default:
+                    ()
             }
             default:
                 ()
@@ -601,16 +800,20 @@ class IDSViewController: UITableViewController, IDSProtocol {
 }
 
 extension IDSViewController: IDSStatusReaderControlPointProtcol {
-    func resetStatusUpdated() {
-        let response = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: IDSStatusReaderControlPoint.sharedInstance().resetResponseCode)?.description
-        //let response = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: status)?.description
-        print("resetStatusResponse: \(String(describing: response))")
-        
-        self.refreshTable()
+    func statusReaderResponseCode(code: UInt16, error: UInt8) {
+        print("statusReaderResponseCode")
+        let codeDescription = IDSStatusReaderControlPoint.StatusReaderOpCodes(rawValue: code)?.description
+        let errorDescription = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: error)?.description
+        showAlert(title: codeDescription!, message: errorDescription!)
+    }
+    
+    func resetStatusUpdated(responseCode: UInt8) {
+        let response = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: responseCode)?.description
+        showAlert(title: "Reset Status Updated", message: response!)
     }
     
     func numberOfActiveBolusIDS(count: UInt8) {
-        self.refreshTable()
+        self.showActiveBolusIDS()
     }
     
     func bolusActiveDelivery(bolusDelivery: String) {
@@ -639,29 +842,153 @@ extension IDSViewController: IDSStatusReaderControlPointProtcol {
 }
 
 extension IDSViewController: IDSCommandDataProtocol {
-    func therapyControlStateUpdated() {
-        let response = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: IDSCommandData.sharedInstance().therapyControlState!)?.description
-        print("therapyControlStateUpdated: \(String(describing: response))")
-        
-        self.refreshTable()
+    func commandDataResponseCode(code: UInt16, error: UInt8) {
+        print("commandDataResponseCode")
+        let codeDescription = IDSOpCodes.OpCodes(rawValue: code)?.description
+        let errorDescription = IDSOpCodes.ResponseCodes(rawValue: error)?.description
+        showAlert(title: codeDescription!, message: errorDescription!)
     }
     
-    func flightModeStatusUpdated() {
-        let response = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: IDSCommandData.sharedInstance().flightModeStatus!)?.description
-        print("flightModeStatusUpdated: \(String(describing: response))")
-        
-        self.refreshTable()
+    func basalRateProfileTemplate(template: BasalRateProfileTemplate) {
+        print("basalRateProfileTemplate")
+    }
+    
+    func isfProfileTemplate(template: ISFProfileTemplate) {
+        print("isfProfileTemplate")
+    }
+    
+    func i2choRatioProfileTemplate(template: I2CHORatioProfileTemplate) {
+        print("i2choRatioProfileTemplate")
+    }
+    
+    func targetGlucoseRangeProfileTemplate(template: TargetGlucoseRangeProfileTemplate) {
+        print("targetGlucoseRangeProfileTemplate")
+    }
+}
+
+extension IDSViewController: IDSCommandControlPointProtcol {
+    func commandControlPointResponseCode(code: UInt16, error: UInt8) {
+        print("commandDataResponseCode")
+        let codeDescription = IDSOpCodes.OpCodes(rawValue: code)?.description
+        let errorDescription = IDSOpCodes.ResponseCodes(rawValue: error)?.description
+        showAlert(title: codeDescription!, message: errorDescription!)
+    }
+    
+    func therapyControlStateUpdated(state: UInt8) {
+        let response = IDSStatusReaderControlPoint.StatusReaderResponseCodes(rawValue: state)?.description
+        print("therapyControlStateUpdated: \(String(describing: response))")
+        showAlert(title: "Set Therapy Control State", message: state.description)
     }
     
     func snoozedAnnunciation(annunciation: UInt16) {
         print("snoozedAnnunciation: \(annunciation)")
+        showAlert(title: "Snooze Annunciation", message: "Success")
     }
     
     func confirmedAnnunciation(annunciation: UInt16) {
         print("confirmedAnnunciation: \(annunciation)")
+        showAlert(title: "Confirm Annunciation", message: "Success")
     }
     
-    func basalRateProfileTemplate(profile: String) {
-        print("basalRateProfileTemplate")
+    func writeBasalRateProfileTemplateResponse() {
+        print("writeBasalRateProfileTemplate")
+        showAlert(title: "Write Basal Rate Profile Template", message: "Success")
+    }
+    
+    func getTBRTemplateResponse(template: TBRTemplate) {
+        print("getTBRTemplateResponse")
+        showAlert(title: "Get TBR Template", message: "Success")
+    }
+    
+    func setTBRTemplateResponse(templateNumber: UInt8) {
+        print("setTBRTemplateResponse")
+        showAlert(title: "Set TBR Template (template number: \(templateNumber.description))", message: "Success")
+    }
+    
+    func setBolusResponse(bolusID: UInt16) {
+        print("setBolusResponse")
+        showAlert(title: "Set Bolus (Bolus ID: \(bolusID.description))", message: "Success")
+    }
+    
+    func cancelBolusResponse(bolusID: UInt16) {
+        print("cancelBolusResponse")
+        showAlert(title: "Cancel Bolus (Bolus ID: \(bolusID.description))", message: "Success")
+    }
+    
+    func getAvailableBolusResponse(availableBoluses: UInt8) {
+        print("getAvailableBolusResponse")
+        let fastBolusAvailable = Int(availableBoluses).bit(0)
+        let extendedBolusAvailable = Int(availableBoluses).bit(1)
+        let multiwaveBolusAvailable = Int(availableBoluses).bit(2)
+        let availableBolusesString = String(format: "Fast Bolus Available: %d\n\rExtended Bolus Available: %d\n\rMultiwave Bolus Available: %d", fastBolusAvailable, extendedBolusAvailable, multiwaveBolusAvailable)
+        showAlert(title: "Get Available Bolus Response", message: availableBolusesString)
+    }
+    
+    func getBolusTemplateResponse(template: BolusTemplate) {
+        print("getBolusTemplateResponse")
+        showAlert(title: "Get Bolus Template Response", message: "Template: \(template.description)")
+    }
+    
+    func setBolusTemplateResponse(template: UInt8) {
+        showAlert(title: "Set TBR Template", message: "Template Number: \(template)")
+    }
+    
+    func templateStatusAndDetails(templateStatuses: [TemplateStatus]) {
+        print("templateStatusAndDetails")
+    }
+    
+    func resetProfileTemplates(templates: [UInt8]) {
+        print("resetProfileTemplates")
+        var templateNumberString = String("Templates Reset: ")
+        for template in templates {
+            templateNumberString.append(String(format: "#%@ ", template.description))
+        }
+        showAlert(title: "Reset Templates Response", message: templateNumberString)
+    }
+    
+    func activateProfileTemplates(templates: [UInt8]) {
+        print("activateProfileTemplates")
+        var templateNumberString = String("Templates Activated: ")
+        for template in templates {
+            templateNumberString.append(String(format: "#%@ ", template.description))
+        }
+        showAlert(title: "Activate Templates Response", message: templateNumberString)
+    }
+    
+    func activatedProfileTemplates(templates: [UInt8]) {
+        print("activatedProfileTemplates")
+        var templateNumberString = String("Activated Templates: ")
+        if templates.count > 0 {
+            for template in templates {
+                templateNumberString.append(String(format: "#%@ ", template.description))
+            }
+        } else {
+            templateNumberString.append("None")
+        }
+        showAlert(title: "Activated Templates", message: templateNumberString)
+    }
+    
+    func writeISFProfileTemplateResponse(templateNumber: UInt8) {
+        print("writeISFProfileTemplateResponse")
+        let templateNumberString = String(format: "Template Number: %d", templateNumber)
+        showAlert(title: "Write ISF Profile Template Response", message: templateNumberString)
+    }
+    
+    func writeI2CHOProfileTemplateResponse(templateNumber: UInt8) {
+        print("writeI2CHOProfileTemplateResponse")
+        let templateNumberString = String(format: "Template Number: %d", templateNumber)
+        showAlert(title: "Write I2CHO Profile Template Response", message: templateNumberString)
+    }
+    
+    func writeTargetGlucoseRangeProfileTemplateResponse(templateNumber: UInt8) {
+        print("writeTargetGlucoseRangeProfileTemplateResponse")
+        let templateNumberString = String(format: "Template Number: %d", templateNumber)
+        showAlert(title: "Write Target Glucose Range Profile Template Response", message: templateNumberString)
+    }
+    
+    func getMaxBolusAmountResponse(bolusAmount: Float) {
+        print("getMaxBolusAmountResponse")
+        let bolusAmountString = String(format: "Bolus Amount: %1.0f", bolusAmount)
+        showAlert(title: "Get Max Bolus Amount Response", message: bolusAmountString)
     }
 }

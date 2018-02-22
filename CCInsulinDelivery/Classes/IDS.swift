@@ -48,6 +48,11 @@ public class IDS : NSObject {
     public var idsStatus: IDSStatus!
     public var idsAnnunciation: IDSAnnunciationStatus!
     
+    public var currentTimeServiceSupported: Bool = false
+    public var batteryServiceSupported: Bool = false
+    public var immediateAlertServiceSupported: Bool = false
+    public var bondManagementServiceSupported: Bool = false
+    
     var peripheralNameToConnectTo : String?
     var servicesAndCharacteristics : [String: [CBCharacteristic]] = [:]
     var allowedToScanForPeripherals:Bool = false
@@ -118,6 +123,11 @@ public class IDS : NSObject {
         IDSCommandData.sharedInstance().parseIDSCommandDataResponse(data: data)
     }
 
+    func parseIDSCommandControlPointCharacteristic(data: NSData) {
+        print("parseIDSCommandControlPointCharacteristic")
+        IDSCommandControlPoint.sharedInstance().parseIDSCommandControlPointResponse(data: data)
+    }
+    
     func crcIsValid(data: NSData) -> Bool {
         let packet = (data.subdata(with: NSRange(location:0, length: data.length - 2)) as NSData!)
         let packetCRC = (data.subdata(with: NSRange(location:data.length - 2, length: 2)) as NSData!)
@@ -196,6 +206,8 @@ extension IDS: BluetoothPeripheralProtocol {
         
         IDSStatusReaderControlPoint.sharedInstance().peripheral = cbPeripheral
         IDSCommandControlPoint.sharedInstance().peripheral = cbPeripheral
+        IDSRecordAccessControlPoint.sharedInstance().peripheral = cbPeripheral
+        IDSDateTime.sharedInstance().peripheral = cbPeripheral
         Bluetooth.sharedInstance().discoverAllServices(cbPeripheral)
     }
     
@@ -204,6 +216,7 @@ extension IDS: BluetoothPeripheralProtocol {
         self.peripheral = nil
         IDSStatusReaderControlPoint.sharedInstance().peripheral = nil
         IDSCommandControlPoint.sharedInstance().peripheral = nil
+        IDSDateTime.sharedInstance().peripheral = nil
         idsDelegate?.IDSDisconnected(ids: cbPeripheral)
     }
 }
@@ -216,6 +229,19 @@ extension IDS: BluetoothServiceProtocol {
     public func didDiscoverServiceWithCharacteristics(_ service:CBService) {
         print("IDS#didDiscoverServiceWithCharacteristics - \(service.uuid.uuidString)")
         servicesAndCharacteristics[service.uuid.uuidString] = service.characteristics
+        
+        if (service.uuid.uuidString == "1805") {
+            currentTimeServiceSupported = true
+        }
+        if (service.uuid.uuidString == "180F") {
+            batteryProfileSupported = true
+        }
+        if (service.uuid.uuidString == "1802") {
+            immediateAlertServiceSupported = true
+        }
+        if (service.uuid.uuidString == "181E") {
+            bondManagementServiceSupported = true
+        }
         
         for characteristic in service.characteristics! {
             if characteristic.properties.contains(CBCharacteristicProperties.read) {
@@ -260,6 +286,11 @@ extension IDS: BluetoothCharacteristicProtocol {
         if(characteristic.uuid.uuidString == idsCommandDataCharacteristic) {
             if(crcIsValid(data: characteristic.value! as NSData)) {
                 self.parseIDSCommandDataCharacteristic(data: characteristic.value! as NSData)
+            }
+        }
+        if(characteristic.uuid.uuidString == idsCommandControlPointCharacteristic) {
+            if(crcIsValid(data: characteristic.value! as NSData)) {
+                self.parseIDSCommandControlPointCharacteristic(data: characteristic.value! as NSData)
             }
         }
     }

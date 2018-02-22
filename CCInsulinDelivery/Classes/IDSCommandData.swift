@@ -11,39 +11,16 @@ import CCToolbox
 var thisIDSCommandData : IDSCommandData?
 
 public protocol IDSCommandDataProtocol {
-    func therapyControlStateUpdated()
-    func flightModeStatusUpdated()
-    func snoozedAnnunciation(annunciation: UInt16)
-    func confirmedAnnunciation(annunciation: UInt16)
-    func basalRateProfileTemplate(profile: String)
+    func commandDataResponseCode(code: UInt16, error: UInt8)
+    func basalRateProfileTemplate(template: BasalRateProfileTemplate)
+    func isfProfileTemplate(template: ISFProfileTemplate)
+    func i2choRatioProfileTemplate(template: I2CHORatioProfileTemplate)
+    func targetGlucoseRangeProfileTemplate(template: TargetGlucoseRangeProfileTemplate)
 }
 
 public class IDSCommandData: NSObject {
     public var idsCommandDataDelegate : IDSCommandDataProtocol?
-    public var therapyControlState: UInt8?
-    public var flightModeStatus: UInt8?
-    
-    public class BasalRateProfileTemplate: Codable {
-        let templateNumber: String
-        let firstTimeBlockNumberIndex: String
-        let firstDuration: String?
-        let firstRate: String?
-        let secondDuration: String?
-        let secondRate: String?
-        let thirdDuration: String?
-        let thirdRate: String?
-        
-        init(templateNumber: String, firstTimeBlockNumberIndex: String, firstDuration: String?, firstRate: String?, secondDuration: String?, secondRate: String?, thirdDuration: String?, thirdRate: String?) {
-            self.templateNumber = templateNumber
-            self.firstTimeBlockNumberIndex = firstTimeBlockNumberIndex
-            self.firstDuration = firstDuration
-            self.firstRate = firstRate
-            self.secondDuration = secondDuration
-            self.secondRate = secondRate
-            self.thirdDuration = thirdDuration
-            self.thirdRate = thirdRate
-        }
-    }
+    public var templatesStatusAndDetails = [TemplateStatus]()
     
     public class func sharedInstance() -> IDSCommandData {
         if thisIDSCommandData == nil {
@@ -57,128 +34,192 @@ public class IDSCommandData: NSObject {
         print("IDSCommandData#init")
     }
     
-    func parseIDSCommandDataResponseCodePacket(data: NSData) {
-        let opCodeBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
-        let opCode: UInt16 = (opCodeBytes?.decode())!
-        switch opCode {
-        case IDSCommandControlPoint.CommandControlOpCodes.set_therapy_control_state.rawValue:
-            parseTherapyControlStateResponse(data: data)
-        case IDSCommandControlPoint.CommandControlOpCodes.set_flight_mode.rawValue:
-            parseFlightModeResponse(data: data)
-        default:
-            ()
-        }
-    }
-    
     public func parseIDSCommandDataResponse(data: NSData) {
         print("parseIDSCommandDataResponse")
-        
-        let reponseCodeBytes = (data.subdata(with: NSRange(location:0, length: 2)) as NSData!)
-        let responseCode: UInt16 = (reponseCodeBytes?.decode())!
+        let responseCode: UInt16 = (data.subdata(with: NSRange(location:0, length: 2)) as NSData!).decode()
         switch responseCode {
-            case IDSCommandControlPoint.CommandControlOpCodes.response_code.rawValue:
-                parseIDSCommandDataResponseCodePacket(data: data)
-            case IDSCommandControlPoint.CommandControlOpCodes.snooze_annunciation_response.rawValue:
-                parseSnoozeAnnunciationResponse(data: data)
-            case IDSCommandControlPoint.CommandControlOpCodes.confirm_annunciation_response.rawValue:
-                parseConfirmAnnunciationResponse(data: data)
-            case IDSCommandControlPoint.CommandControlOpCodes.read_basal_rate_profile_template_response.rawValue:
+            case IDSOpCodes.OpCodes.readBasalRateProfileTemplateResponse.rawValue:
                 parseReadBasalRateProfileTemplateResponse(data: data)
+            case IDSOpCodes.OpCodes.getTemplateStatusAndDetailsResponse.rawValue:
+                parseGetTemplateStatusAndDetailsResponse(data: data)
+            case IDSOpCodes.OpCodes.readISFProfileTemplateResponse.rawValue:
+                parseReadISFProfileTemplateResponse(data: data)
+            case IDSOpCodes.OpCodes.readI2CHORatioProfileTemplateResponse.rawValue:
+                parseReadI2CHORatioProfileTemplateResponse(data: data)
+            case IDSOpCodes.OpCodes.readTargetGlucoseRangeProfileTemplateResponse.rawValue:
+                parseReadTargetGlucoseRangeProfileTemplateResponse(data: data)
             default:
-                ()
+            ()
         }
-    }
-    
-    func parseTherapyControlStateResponse(data: NSData) {
-        print("parseTherapyControlStateResponse")
-        
-        let valueByte = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!)
-        self.therapyControlState = (valueByte?.decode())!
-        idsCommandDataDelegate?.therapyControlStateUpdated()
-    }
-    
-    func parseFlightModeResponse(data: NSData) {
-        print("parseFlightModeResponse")
-        
-        let valueByte = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!)
-        self.flightModeStatus = (valueByte?.decode())!
-        idsCommandDataDelegate?.flightModeStatusUpdated()
-    }
-    
-    func parseSnoozeAnnunciationResponse(data: NSData) {
-        print("parseSnoozeAnnunciationResponse")
-        
-        let snoozedAnnunciationBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
-        let snoozedAnnunciation: UInt16 = (snoozedAnnunciationBytes?.decode())!
-        idsCommandDataDelegate?.snoozedAnnunciation(annunciation: snoozedAnnunciation)
-    }
-    
-    func parseConfirmAnnunciationResponse(data: NSData) {
-        print("parseConfirmAnnunciationResponse")
-        
-        let confirmedAnnunciationBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
-        let confirmedAnnunciation: UInt16 = (confirmedAnnunciationBytes?.decode())!
-        idsCommandDataDelegate?.confirmedAnnunciation(annunciation: confirmedAnnunciation)
     }
     
     func parseReadBasalRateProfileTemplateResponse(data: NSData) {
         print("parseReadBasalRateProfileTemplateResponse")
         
-        var secondDuration: UInt16?
-        var thirdDuration: UInt16?
-        var secondRate: Float?
-        var thirdRate: Float?
+        var secondDuration: UInt16 = 0
+        var thirdDuration: UInt16 = 0
+        var secondRate: Float = 0
+        var thirdRate: Float = 0
         
-        let flags = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!)
-        let flagBits: UInt8 = (flags?.decode())!
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let firstTimeblockIndexNumber: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let firstDuration: UInt16 = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!).decode()
+        let firstRate: Float = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!).shortFloatToFloat()
         
-        let templateNumberByte = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!)
-        let templateNumber: UInt8 = (templateNumberByte?.decode())!
-        
-        let firstTimeblockIndexNumberByte = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!)
-        let firstTimeblockIndexNumber: UInt8 = (firstTimeblockIndexNumberByte?.decode())!
-        
-        let firstDurationBytes = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!)
-        let firstDuration: UInt8 = (firstDurationBytes?.decode())!
-        
-        let firstRateBytes = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!)
-        let firstRate: Float = (firstRateBytes?.shortFloatToFloat())!
-        
-        if Int(flagBits).bit(0).toBool()! {
-            let secondDurationBytes = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!)
-            secondDuration = (secondDurationBytes?.decode())!
-            
-            let secondRateBytes = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!)
-            secondRate = secondRateBytes?.shortFloatToFloat()
+        if Int(flags).bit(0).toBool()! {
+            secondDuration = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!).decode()
+            secondRate = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!).shortFloatToFloat()
         }
         
-        if Int(flagBits).bit(1).toBool()! {
-            let thirdDurationBytes = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!)
-            thirdDuration = (thirdDurationBytes?.decode())!
-            
-            let thirdRateBytes = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!)
-            thirdRate = thirdRateBytes?.shortFloatToFloat()
+        if Int(flags).bit(1).toBool()! {
+            thirdDuration = (data.subdata(with: NSRange(location:13, length: 2)) as NSData!).decode()
+            thirdRate = (data.subdata(with: NSRange(location:15, length: 2)) as NSData!).shortFloatToFloat()
         }
         
-        let basalRateProfileTemplate = BasalRateProfileTemplate(templateNumber: templateNumber.description,
-                                         firstTimeBlockNumberIndex: firstTimeblockIndexNumber.description,
-                                         firstDuration: firstDuration.description,
-                                         firstRate: firstRate.description,
-                                         secondDuration: secondDuration?.description,
-                                         secondRate: secondRate?.description,
-                                         thirdDuration: thirdDuration?.description,
-                                         thirdRate: thirdRate?.description)
+        let basalRateProfileTemplate = BasalRateProfileTemplate(templateNumber: templateNumber,
+                                                                firstTimeBlockNumberIndex: firstTimeblockIndexNumber,
+                                                                firstDuration: firstDuration,
+                                                                firstRate: firstRate,
+                                                                secondDuration: secondDuration,
+                                                                secondRate: secondRate,
+                                                                thirdDuration: thirdDuration,
+                                                                thirdRate: thirdRate)
         print(basalRateProfileTemplate)
         
-        // https://medium.com/@ashishkakkad8/use-of-codable-with-jsonencoder-and-jsondecoder-in-swift-4-71c3637a6c65
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(basalRateProfileTemplate)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsCommandDataDelegate?.basalRateProfileTemplate(profile: jsonString!)
+        idsCommandDataDelegate?.basalRateProfileTemplate(template: basalRateProfileTemplate)
+    }
+    
+    func parseGetTemplateStatusAndDetailsResponse(data: NSData) {
+        print("parseGetTemplateStatusAndDetailsResponse")
+        
+        let templateType: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let startingTemplateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let numberOfTemplates: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let maxNumberOfSupportedTimeBlocks: UInt8 = (data.subdata(with: NSRange(location:5, length: 1)) as NSData!).decode()
+        let configurableAndConfiguredFlags: Int = (data.subdata(with: NSRange(location:6, length: 1)) as NSData!).decode()
+        
+        print("template type: \(templateType)")
+        print("starting template number: \(startingTemplateNumber)")
+        print("number of templates: \(numberOfTemplates)")
+        print("maxNumber of supported time blocks: \(maxNumberOfSupportedTimeBlocks)")
+        print("configurable and configured flags: \(configurableAndConfiguredFlags)")
+        
+        var y: Int = 0
+        for x in 0...numberOfTemplates {
+            let configurable = configurableAndConfiguredFlags.bit(y).toBool()
+            let configured = configurableAndConfiguredFlags.bit(y+1).toBool()
+            let template = TemplateStatus(templateType: templateType,
+                                          templateNumber: startingTemplateNumber + x,
+                                          maxNumberOfSupportedTimeBlocks: maxNumberOfSupportedTimeBlocks,
+                                          configurable: configurable!,
+                                          configured: configured!)
+            
+            templatesStatusAndDetails.append(template)
+            y+=2
         }
-        catch {
+    }
+    
+    func parseReadISFProfileTemplateResponse(data: NSData) {
+        print("parseReadISFProfileTemplateResponse")
+        var secondDuration: UInt16 = 0
+        var thirdDuration: UInt16 = 0
+        var secondISF: Float = 0
+        var thirdISF: Float = 0
+        
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let firstDuration: UInt16 = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!).decode()
+        let firstISF = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!).shortFloatToFloat()
+        
+        if Int(flags).bit(0).toBool()! {
+            secondDuration = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!).decode()
+            secondISF = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!).shortFloatToFloat()
         }
+        
+        if Int(flags).bit(1).toBool()! {
+            thirdDuration = (data.subdata(with: NSRange(location:13, length: 2)) as NSData!).decode()
+            thirdISF = (data.subdata(with: NSRange(location:15, length: 2)) as NSData!).shortFloatToFloat()
+        }
+        
+        let isfTemplate = ISFProfileTemplate(templateNumber: templateNumber,
+                                         firstTimeBlockNumberIndex: firstTimeBlockNumberIndex,
+                                         firstDuration: firstDuration,
+                                         firstISF: firstISF,
+                                         secondDuration: secondDuration,
+                                         secondISF: secondISF,
+                                         thirdDuration: thirdDuration,
+                                         thirdISF: thirdISF)
+        
+        idsCommandDataDelegate?.isfProfileTemplate(template: isfTemplate)
+    }
+    
+    func parseReadI2CHORatioProfileTemplateResponse(data: NSData) {
+        print("parseReadI2CHORatioProfileTemplateResponse")
+        
+        var secondDuration: UInt16 = 0
+        var thirdDuration: UInt16 = 0
+        var secondRatio: Float = 0
+        var thirdRatio: Float = 0
+        
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let firstDuration: UInt16 = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!).decode()
+        let firstRatio = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!).shortFloatToFloat()
+        
+        if Int(flags).bit(0).toBool()! {
+            secondDuration = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!).decode()
+            secondRatio = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!).shortFloatToFloat()
+        }
+        
+        if Int(flags).bit(1).toBool()! {
+            thirdDuration = (data.subdata(with: NSRange(location:13, length: 2)) as NSData!).decode()
+            thirdRatio = (data.subdata(with: NSRange(location:15, length: 2)) as NSData!).shortFloatToFloat()
+        }
+        
+        let i2choTemplate = I2CHORatioProfileTemplate(templateNumber: templateNumber,
+                                                      firstTimeBlockNumberIndex: firstTimeBlockNumberIndex,
+                                                      firstDuration: firstDuration,
+                                                      firstI2CHORatio: firstRatio,
+                                                      secondDuration: secondDuration,
+                                                      secondI2CHORatio: secondRatio,
+                                                      thirdDuration: thirdDuration,
+                                                      thirdI2CHORatio: thirdRatio)
+        
+        idsCommandDataDelegate?.i2choRatioProfileTemplate(template: i2choTemplate)
+    }
+    
+    func parseReadTargetGlucoseRangeProfileTemplateResponse(data: NSData) {
+        print("parseReadTargetGlucoseRangeProfileTemplateResponse")
+        
+        var secondDuration: UInt16 = 0
+        var secondLowerTargetGlucoseLimit: Float = 0
+        var secondUpperTargetGlucoseLimit: Float = 0
+        
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let firstDuration: UInt16 = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!).decode()
+        let firstLowerTargetGlucoseLimit = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!).shortFloatToFloat()
+        let firstUpperTargetGlucoseLimit = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!).shortFloatToFloat()
+        
+        if Int(flags).bit(1).toBool()! {
+            secondDuration = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!).decode()
+            secondLowerTargetGlucoseLimit = (data.subdata(with: NSRange(location:13, length: 2)) as NSData!).shortFloatToFloat()
+            secondUpperTargetGlucoseLimit = (data.subdata(with: NSRange(location:15, length: 2)) as NSData!).shortFloatToFloat()
+        }
+        
+        let targetGlucoseRangeProfileTemplate = TargetGlucoseRangeProfileTemplate(templateNumber: templateNumber,
+                                                         firstTimeBlockNumberIndex: firstTimeBlockNumberIndex,
+                                                         firstDuration: firstDuration,
+                                                         firstLowerTargetGlucoseLimit: firstLowerTargetGlucoseLimit,
+                                                         firstUpperTargetGlucoseLimit: firstUpperTargetGlucoseLimit,
+                                                         secondDuration: secondDuration,
+                                                         secondLowerTargetGlucoseLimit: secondLowerTargetGlucoseLimit,
+                                                         secondUpperTargetGlucoseLimit: secondUpperTargetGlucoseLimit)
+        
+        idsCommandDataDelegate?.targetGlucoseRangeProfileTemplate(template: targetGlucoseRangeProfileTemplate)
     }
 }

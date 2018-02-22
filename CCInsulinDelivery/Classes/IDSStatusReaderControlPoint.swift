@@ -14,7 +14,8 @@ import CCBluetooth
 var thisIDSStatusReaderControlPoint : IDSStatusReaderControlPoint?
 
 public protocol IDSStatusReaderControlPointProtcol {
-    func resetStatusUpdated()
+    func statusReaderResponseCode(code: UInt16, error: UInt8)
+    func resetStatusUpdated(responseCode: UInt8)
     func numberOfActiveBolusIDS(count: UInt8)
     func bolusActiveDelivery(bolusDelivery: String)
     func basalActiveDelivery(basalDelivery: String)
@@ -121,6 +122,43 @@ public class IDSStatusReaderControlPoint: NSObject {
         get_delivered_insulin_response = 0x03CF,
         get_insulin_on_board = 0x03F3,
         get_insulin_on_board_response = 0x03FC
+    
+        public var description: String {
+            switch self {
+            case .response_code:
+                return NSLocalizedString("Response Code", comment:"")
+            case .reset_status:
+                return NSLocalizedString("Reset Status", comment:"")
+            case .get_active_bolus_ids:
+                return NSLocalizedString("Get Active Bolus ID's", comment:"")
+            case .get_active_bolus_ids_response:
+                return NSLocalizedString("Get Active Bolus ID's Response", comment:"")
+            case .get_active_bolus_delivery:
+                return NSLocalizedString("Get Active Bolus Delivery", comment:"")
+            case .get_active_bolus_delivery_response:
+                return NSLocalizedString("Get Active Bolus Delivery Response", comment:"")
+            case .get_active_basal_rate_delivery:
+                return NSLocalizedString("Get Active Basal Tate Delivery", comment:"")
+            case .get_active_basal_rate_delivery_response:
+                return NSLocalizedString("Get Active Basal Rate Delivery Response", comment:"")
+            case .get_total_daily_insulin_status:
+                return NSLocalizedString("Get Total Daily Insulin Status", comment:"")
+            case .get_total_daily_insulin_status_response:
+                return NSLocalizedString("Get Total Daily Insulin Status Response", comment:"")
+            case .get_counter:
+                return NSLocalizedString("Get Counter", comment:"")
+            case .get_counter_response:
+                return NSLocalizedString("Get Counter Response", comment:"")
+            case .get_delivered_insulin:
+                return NSLocalizedString("Get Delivered Insulin", comment:"")
+            case .get_delivered_insulin_response:
+                return NSLocalizedString("Get Delivered Insulin Response", comment:"")
+            case .get_insulin_on_board:
+                return NSLocalizedString("Get Insulin on Board", comment:"")
+            case .get_insulin_on_board_response:
+                return NSLocalizedString("Get Insulin on Board Response", comment:"")
+            }
+        }
     }
     
     @objc public enum StatusReaderResponseCodes: UInt8 {
@@ -320,22 +358,15 @@ public class IDSStatusReaderControlPoint: NSObject {
         let opCode: UInt16 = (opCodeBytes?.decode())!
             switch opCode {
             case StatusReaderOpCodes.response_code.rawValue:
-                //this could be a reset status, or an error for a specific op code
                 print("response code")
                 self.parseResponseCodeOpCode(data: data)
-            //case OpCodes.reset_status.rawValue:
-            //    print("reset status")
             case StatusReaderOpCodes.get_active_bolus_ids_response.rawValue:
-                print("get active bolus ids response")
                 self.parseGetActiveBolusIDSResponse(data: data)
             case StatusReaderOpCodes.get_active_bolus_delivery_response.rawValue:
-                print("get active bolus delivery response")
                 self.parseGetActiveBolusDeliveryResponse(data: data)
             case StatusReaderOpCodes.get_active_basal_rate_delivery_response.rawValue:
-                print("get_active_basal_rate_delivery_response")
                 self.parseGetActiveBasalRateDeliveryResponse(data: data)
             case StatusReaderOpCodes.get_total_daily_insulin_status_response.rawValue:
-                print("get_total_daily_insulin_status_response")
                 self.parseGetTotalDailyInsulinStatus(data: data)
             case StatusReaderOpCodes.get_counter_response.rawValue:
                 self.parseGetCounter(data: data)
@@ -349,17 +380,16 @@ public class IDSStatusReaderControlPoint: NSObject {
     }
     
     public func parseResponseCodeOpCode(data: NSData) {
-        let requestCodeBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
-        var requestCode: Int = 0
-        requestCodeBytes?.getBytes(&requestCode, length: MemoryLayout<UInt16>.size)
-        switch(requestCode) {
+        let opCode: Int = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!).decode()
+        let operand: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        
+        switch(opCode) {
             case Int(StatusReaderOpCodes.reset_status.rawValue):
-                let operand = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!)
-                self.resetResponseCode = (operand?.decode())!
-                
-                idsStatusReaderControlPointDelegate?.resetStatusUpdated()
+                let response: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+                idsStatusReaderControlPointDelegate?.resetStatusUpdated(responseCode: response)
             case Int(StatusReaderOpCodes.get_active_bolus_ids.rawValue):
-                print("get_active_bolus_ids error")
+                //print("get_active_bolus_ids error")
+                idsStatusReaderControlPointDelegate?.statusReaderResponseCode(code: UInt16(opCode), error: operand)
             case Int(StatusReaderOpCodes.get_active_bolus_delivery.rawValue):
                 print("get_active_bolus_delivery error")
             default:
@@ -372,25 +402,17 @@ public class IDSStatusReaderControlPoint: NSObject {
         let numberOfActiveBolusIDS: UInt8 = number!.decode()
         var j: Int = 0
         
+        activeBolusIDS.removeAll()
         for i in 0 ..< Int(numberOfActiveBolusIDS) {
-            let activeIDS = (data.subdata(with: NSRange(location:i + j + 3, length: 2)) as NSData!).swapUInt16Data()
-            activeBolusIDS.append(activeIDS.decode())
+            let bolusID: UInt16 = (data.subdata(with: NSRange(location:i + j + 3, length: 2)) as NSData!).decode()
+            activeBolusIDS.append(bolusID)
             j += 1
         }
-        
         idsStatusReaderControlPointDelegate?.numberOfActiveBolusIDS(count: numberOfActiveBolusIDS)
     }
     
     func parseGetActiveBolusDeliveryResponse(data: NSData) {
         var fastRemainingAmount: Float = 0
-        
-        //let flags = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!)
-        //let flagBits: Int = self.decode(data: flags!)
-        //let bolusDelayTimePresent = flagBits.bit(bolusDelayTimePresentBit).toBool()!
-        //let bolusTemplateNumberPresent = flagBits.bit(bolusTemplateNumberPresentBit).toBool()!
-        //let bolusActivationTypePresent = flagBits.bit(bolusActivationTypePresentBit).toBool()!
-        //let bolusDeliveryReasonCorrection = flagBits.bit(bolusDeliveryReasonCorrectionBit).toBool()!
-        //let bolusDeliveryReasonMeal = flagBits.bit(bolusDeliveryReasonMealBit).toBool()!
         
         let bolusIDBytes  = (data.subdata(with: NSRange(location:3, length: 2)) as NSData!).swapUInt16Data()
         let bolusID: UInt16 = bolusIDBytes.decode()
@@ -617,6 +639,7 @@ public class IDSStatusReaderControlPoint: NSObject {
         }
     }
     
+    //pg 108
     public func resetSensorStatus() {
         print("IDSStatusReaderControlPoint#resetStatus")
         
@@ -625,7 +648,8 @@ public class IDSStatusReaderControlPoint: NSObject {
         //op code, reset all bits (0xFF) , crc counter (0x00)
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0xFF,
+                                           0xFF, //reset all status bits
+                                           0x00, //RFU
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -636,6 +660,7 @@ public class IDSStatusReaderControlPoint: NSObject {
     }
     
     public func getActiveBolusIDs() {
+        activeBolusIDS.removeAll()
         let opCode: UInt16 = StatusReaderOpCodes.get_active_bolus_ids.rawValue
         
         //op code, no operand , crc counter (0x00)

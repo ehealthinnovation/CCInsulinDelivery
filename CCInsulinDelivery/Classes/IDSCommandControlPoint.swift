@@ -13,157 +13,30 @@ import CCBluetooth
 var thisIDSCommandControlPoint : IDSCommandControlPoint?
 
 public protocol IDSCommandControlPointProtcol {
-    
+    func commandControlPointResponseCode(code: UInt16, error: UInt8)
+    func snoozedAnnunciation(annunciation: UInt16)
+    func confirmedAnnunciation(annunciation: UInt16)
+    func writeBasalRateProfileTemplateResponse()
+    func getTBRTemplateResponse(template: TBRTemplate)
+    func setTBRTemplateResponse(templateNumber: UInt8)
+    func setBolusResponse(bolusID: UInt16)
+    func cancelBolusResponse(bolusID: UInt16)
+    func getAvailableBolusResponse(availableBoluses: UInt8)
+    func getBolusTemplateResponse(template: BolusTemplate)
+    func setBolusTemplateResponse(template: UInt8)
+    func templateStatusAndDetails(templateStatuses: [TemplateStatus])
+    func resetProfileTemplates(templates: [UInt8])
+    func activatedProfileTemplates(templates: [UInt8])
+    func activateProfileTemplates(templates: [UInt8])
+    func writeISFProfileTemplateResponse(templateNumber: UInt8)
+    func writeI2CHOProfileTemplateResponse(templateNumber: UInt8)
+    func writeTargetGlucoseRangeProfileTemplateResponse(templateNumber: UInt8)
+    func getMaxBolusAmountResponse(bolusAmount: Float)
 }
 
 public class IDSCommandControlPoint: NSObject {
     public var peripheral: CBPeripheral?
-    
-    @objc public enum CommandControlOpCodes: UInt16 {
-        case response_code = 0x0F55,
-        set_therapy_control_state = 0x0F5A,
-        set_flight_mode = 0x0F66,
-        snooze_annunciation = 0x0F69,
-        snooze_annunciation_response = 0x0F96,
-        confirm_annunciation = 0x0F99,
-        confirm_annunciation_response = 0x0FA5,
-        read_basal_rate_profile_template = 0x0FAA,
-        read_basal_rate_profile_template_response = 0x0FC3,
-        write_basal_rate_profile_template = 0x0FCC,
-        write_basal_rate_profile_template_response = 0x0FF0,
-        set_tbr_adjustment = 0x0FFF,
-        cancel_tbr_adjustment = 0x1111,
-        get_tbr_template = 0x111E,
-        get_tbr_template_response = 0x1122,
-        set_tbr_template = 0x112D,
-        set_tbr_template_response = 0x1144,
-        set_bolus = 0x114B,
-        set_bolus_response = 0x1177,
-        cancel_bolus = 0x1178,
-        cancel_bolus_response = 0x1187,
-        get_available_boluses = 0x1188,
-        get_available_boluses_response = 0x11B4,
-        get_bolus_template = 0x11BB,
-        get_bolus_template_response = 0x11D2,
-        set_bolus_template = 0x11DD,
-        set_bolus_template_response = 0x11E1,
-        get_template_status_and_details = 0x11EE,
-        get_template_status_and_details_response = 0x1212,
-        reset_template_status = 0x121D,
-        reset_template_status_response = 0x1221,
-        activate_profile_templates = 0x122E,
-        activate_profile_templates_response = 0x1247,
-        get_activated_profile_templates = 0x1248,
-        get_activated_profile_templates_response = 0x1274,
-        start_priming = 0x127B,
-        stop_priming = 0x1284,
-        set_initial_reservoir_fill_level = 0x128B,
-        reset_reservoir_insulin_operation_time = 0x12B7,
-        read_isf_profile_template = 0x12B8,
-        read_isf_profile_template_response = 0x12D1,
-        write_isf_profile_template = 0x12DE,
-        write_isf_profile_template_response = 0x12E2,
-        read_i2cho_ratio_profile_template = 0x12ED,
-        read_i2cho_ratio_profile_template_response = 0x1414,
-        write_i2cho_ratio_profile_template = 0x141B,
-        write_i2cho_ratio_profile_template_response = 0x1427,
-        read_target_glucose_range_profile_template = 0x1428,
-        read_target_glucose_range_profile_template_response = 0x1441,
-        write_target_glucose_range_profile_template = 0x144E,
-        write_target_glucose_range_profile_template_response = 0x1472,
-        get_max_bolus_amount = 0x147D,
-        get_max_bolus_amount_response = 0x1482,
-        set_max_bolus_amount = 0x148D
-    }
-    
-    @objc public enum ResponseCodes: UInt8 {
-        case success = 0x0F,
-        op_code_not_supported = 0x70,
-        invalid_operand = 0x71,
-        procedure_not_completed = 0x72,
-        parameter_out_of_range = 0x73,
-        procedure_not_applicable = 0x74,
-        plausibility_check_failed = 0x75,
-        maximum_bolus_number_reached = 0x76
-        
-        public var description: String {
-            switch self {
-            case .success:
-                return NSLocalizedString("Success", comment:"")
-            case .op_code_not_supported:
-                return NSLocalizedString("Op code not supported", comment:"")
-            case .invalid_operand:
-                return NSLocalizedString("Invalid operand", comment:"")
-            case .procedure_not_completed:
-                return NSLocalizedString("Procedure not completed", comment:"")
-            case .parameter_out_of_range:
-                return NSLocalizedString("Parameter out of range", comment:"")
-            case .procedure_not_applicable:
-                return NSLocalizedString("Procedure not applicable", comment:"")
-            case .plausibility_check_failed:
-                return NSLocalizedString("Plausibility Check Failed", comment:"")
-            case .maximum_bolus_number_reached:
-                return NSLocalizedString("Maximum Bolus Number Reached", comment:"")
-            }
-        }
-    }
-    
-    @objc public enum TherapyControlStateValues: UInt8 {
-        case undetermined = 0x0F,
-        stop = 0x70,
-        pause = 0x71,
-        run = 0x72
-        
-        public var description: String {
-            switch self {
-            case .undetermined:
-                return NSLocalizedString("Undetermined", comment:"")
-            case .stop:
-                return NSLocalizedString("Stop", comment:"")
-            case .pause:
-                return NSLocalizedString("Pause", comment:"")
-            case .run:
-                return NSLocalizedString("Run", comment:"")
-            }
-        }
-    }
-    
-    @objc public enum TBRTypeValues: UInt8 {
-        case undetermined = 0x0F,
-        absolute = 0x33,
-        relative = 0x3C
-        
-        public var description: String {
-            switch self {
-            case .undetermined:
-                return NSLocalizedString("Undetermined", comment:"")
-            case .absolute:
-                return NSLocalizedString("Absolute", comment:"")
-            case .relative:
-                return NSLocalizedString("Relative", comment:"")
-            }
-        }
-    }
-    
-    @objc public enum TBRDeliveryContextValues: UInt8 {
-        case undetermined = 0x0F,
-        deviceBased = 0x33,
-        remoteControl = 0x3C,
-        apController = 0x55
-        
-        public var description: String {
-            switch self {
-            case .undetermined:
-                return NSLocalizedString("Undetermined", comment:"")
-            case .deviceBased:
-                return NSLocalizedString("Device Based", comment:"")
-            case .remoteControl:
-                return NSLocalizedString("Remote Control", comment:"")
-            case .apController:
-                return NSLocalizedString("AP Controller", comment: "")
-            }
-        }
-    }
+    public var idsCommandControlPointDelegate : IDSCommandControlPointProtcol?
     
     public class func sharedInstance() -> IDSCommandControlPoint {
         if thisIDSCommandControlPoint == nil {
@@ -185,7 +58,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func setTherapyControlState() {
-        let opCode: UInt16 = CommandControlOpCodes.set_therapy_control_state.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setTherapyControlState.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -200,7 +73,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func setFlightMode() {
-        let opCode: UInt16 = CommandControlOpCodes.set_flight_mode.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setFlightMode.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -213,13 +86,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func snoozeAnnunciation() {
-        let opCode: UInt16 = CommandControlOpCodes.snooze_annunciation.rawValue
-        
+    public func snoozeAnnunciation(annunciation: UInt16) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.snoozeAnnunciation.rawValue
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x00,
-                                           0x01,
+                                           UInt8(annunciation & 0xff),
+                                           UInt8(annunciation >> 8),
                                            0x00] as [UInt8], length: 5)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -229,13 +101,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func confirmAnnunciation() {
-        let opCode: UInt16 = CommandControlOpCodes.confirm_annunciation.rawValue
-        
+    public func confirmAnnunciation(annunciation: UInt16) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.confirmAnnunciation.rawValue
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x00,
-                                           0x01,
+                                           UInt8(annunciation & 0xff),
+                                           UInt8(annunciation >> 8),
                                            0x00] as [UInt8], length: 5)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -245,12 +116,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func readBasalRateProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.read_basal_rate_profile_template.rawValue
+    public func readBasalRateProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.readBasalRateProfileTemplate.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x01,
+                                           templateNumber,
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -260,28 +131,24 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func writeBasalRateProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.write_basal_rate_profile_template.rawValue
+    public func writeBasalRateProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.writeBasalRateProfileTemplate.rawValue
         let flags: UInt8 = 0x01 //end transaction: true, second present: false, third present: false
         let firstDuration: UInt16 = 1440 //1440 = 24 hours (total duration must be 24 hours)
-        let a: Float = 1.0
-        let b: Float = a.floatToShortFloat()
-        let c = Int(b)
-        //let c: [UInt8] = self.toByteArray(b).reversed()
+        let firstRateValue: Float = 2.0
+        let firstRateValueShort: Float = firstRateValue.floatToShortFloat()
+        let firstRate = Int(firstRateValueShort)
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            flags,
-                                           0x01, //Basal Rate Profile Template Number
+                                           templateNumber, //Basal Rate Profile Template Number
                                            0x01, //First Time Block Number Index
                                            UInt8(firstDuration & 0xff),
                                            UInt8(firstDuration >> 8),
-                                           UInt8(c & 0xff),
-                                           UInt8(c >> 8),
-                                           //c[1],
-                                           //c[0],
-                                           0x00 //crc counter
-                                           ] as [UInt8], length: 10) //look into why as! is necessary
+                                           UInt8(firstRate & 0xff),
+                                           UInt8(firstRate >> 8),
+                                           0x00] as [UInt8], length: 10)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
         
@@ -291,9 +158,13 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func setTBRAdjustment() {
-        let opCode: UInt16 = CommandControlOpCodes.set_tbr_adjustment.rawValue
-        let flags: UInt8 = 0x07 //TBR Template Number Present: true, TBR Delivery Context Present: true, Change TBR: true
-        
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setTBRAdjustment.rawValue
+        let flags: UInt8 = 0x00
+        /*
+         bit 0 = tbr template number present
+         bit 1 = tbr delivery context present
+         bit 2 = change tbr
+         */
         let tbrAdjustment: Float = 2.1
         let tbrAdjustmentValue: Int = Int(tbrAdjustment.floatToShortFloat())
         let tbrDuration: UInt16 = 2
@@ -319,7 +190,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func cancelTBRAdjustment() {
-        let opCode: UInt16 = CommandControlOpCodes.cancel_tbr_adjustment.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.cancelTBRAdjustment.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -332,12 +203,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func getTBRTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.get_tbr_template.rawValue
+    public func getTBRTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.getTBRTemplate.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x01,
+                                           templateNumber,
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -347,16 +218,16 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func setTBRTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.set_tbr_template.rawValue
+    public func setTBRTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setTBRTemplate.rawValue
         let tbrAdjustment: Float = 2.1
         let tbrAdjustmentValue: Int = Int(tbrAdjustment.floatToShortFloat())
         let tbrDuration: UInt16 = 2
-        let tbrTemplateNumber: UInt8 = 1
+        //let tbrTemplateNumber: UInt8 = 1
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           tbrTemplateNumber, // TBR Template Number
+                                           templateNumber, // TBR Template Number
                                            UInt8(TBRTypeValues.absolute.rawValue),
                                            UInt8(tbrAdjustmentValue & 0xff),
                                            UInt8(tbrAdjustmentValue >> 8),
@@ -372,13 +243,20 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func setBolus() {
-        let opCode: UInt16 = CommandControlOpCodes.set_bolus.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setBolus.rawValue
         let bolusFastAmount: Float = 2.1
         let bolusFastAmountValue: Int = Int(bolusFastAmount.floatToShortFloat())
-        
+        let flags: UInt8 = 0
+        /*
+        bit 0 = Bolus Delay Time Present
+        bit 1 = Bolus Template Number Present
+        bit 2 = Bolus Activation Type Present
+        bit 3 = Bolus Delivery Reason Correction
+        bit 4 = Bolus Delivery Reason Meal
+        */
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x00, // all flags cleared
+                                           flags, // all flags cleared
                                            IDSStatusReaderControlPoint.BolusType.fast.rawValue,
                                            UInt8(bolusFastAmountValue & 0xff),
                                            UInt8(bolusFastAmountValue >> 8),
@@ -395,10 +273,8 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func cancelBolus() {
-        let opCode: UInt16 = CommandControlOpCodes.cancel_bolus.rawValue
-        let bolusID: UInt16 = 2
-        
+    public func cancelBolus(bolusID: UInt16) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.cancelBolus.rawValue
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            UInt8(bolusID & 0xff),
@@ -413,8 +289,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func getAvailableBoluses() {
-        let opCode: UInt16 = CommandControlOpCodes.get_available_boluses.rawValue
-        
+        let opCode: UInt16 = IDSOpCodes.OpCodes.getAvailableBoluses.rawValue
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            0x00] as [UInt8], length: 3)
@@ -426,12 +301,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func getBolusTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.get_bolus_template.rawValue
-        let bolusTemplateNumber: UInt8 = 1
+    public func getBolusTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.getBolusTemplate.rawValue
+        
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           UInt8(bolusTemplateNumber),
+                                           UInt8(templateNumber),
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -441,15 +316,19 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func setBolusTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.set_bolus_template.rawValue
-        let bolusTemplateNumber: UInt8 = 1
+    public func setBolusTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setBolusTemplate.rawValue
         let flags: UInt8 = 0
+        /*
+        bit 0 = Bolus Delay Time Present
+        bit 1 = Bolus Delivery Reason Correction
+        bit 2 = Bolus Delivery Reason Meal
+        */
         let bolusFastAmount: Float = 2.1
         let bolusFastAmountValue: Int = Int(bolusFastAmount.floatToShortFloat())
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           UInt8(bolusTemplateNumber),
+                                           UInt8(templateNumber),
                                            flags, // all flags cleared
                                            IDSStatusReaderControlPoint.BolusType.fast.rawValue,
                                            UInt8(bolusFastAmountValue & 0xff),
@@ -458,6 +337,7 @@ public class IDSCommandControlPoint: NSObject {
                                            0x00, //Bolus Extended Amount
                                            0x00, //Bolus Duration
                                            0x00, //Bolus Duration
+                                           0x00, //Delay time
                                            0x00] as [UInt8], length: 12)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -468,7 +348,9 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func getTemplateStatusAndDetails() {
-        let opCode: UInt16 = CommandControlOpCodes.get_template_status_and_details.rawValue
+        IDSCommandData.sharedInstance().templatesStatusAndDetails.removeAll()
+        
+        let opCode: UInt16 = IDSOpCodes.OpCodes.getTemplateStatusAndDetails.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -481,17 +363,21 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func resetTemplateStatus() {
-        let opCode: UInt16 = CommandControlOpCodes.reset_template_status.rawValue
-        let numberOfTemplatesToReset: UInt8 = 2
-        let templatesToReset: [UInt8] = [1,2]
+    public func resetTemplateStatus(templatesNumbers: [UInt8]) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.resetTemplateStatus.rawValue
+        let numberOfTemplatesToReset: Int = templatesNumbers.count
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            UInt8(numberOfTemplatesToReset),
-                                           UInt8(templatesToReset[0]),
-                                           UInt8(templatesToReset[1]),
-                                           0x00] as [UInt8], length: 6)
+                                          ] as [UInt8], length: 3)
+        
+        for i in 0...(numberOfTemplatesToReset-1) {
+            let templateNumber = NSMutableData(bytes: [ UInt8(templatesNumbers[i]) ] as [UInt8], length: 1)
+            
+            packet.append(templateNumber as Data)
+        }
+        
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
         
@@ -500,17 +386,21 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func activateProfileTemplates() {
-        let opCode: UInt16 = CommandControlOpCodes.activate_profile_templates.rawValue
-        let numberOfProfileTemplatesToActivate: UInt8 = 2
-        let profileTemplatesToActivate: [UInt8] = [1,2]
+    public func activateProfileTemplates(templatesNumbers: [UInt8]) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.activateProfileTemplates.rawValue
+        let numberOfTemplatesToActivate: Int = templatesNumbers.count
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           UInt8(numberOfProfileTemplatesToActivate),
-                                           UInt8(profileTemplatesToActivate[0]),
-                                           UInt8(profileTemplatesToActivate[1]),
-                                           0x00] as [UInt8], length: 6)
+                                           UInt8(numberOfTemplatesToActivate),
+                                           ] as [UInt8], length: 3)
+        
+        for i in 0...(numberOfTemplatesToActivate-1) {
+            let templateNumber = NSMutableData(bytes: [ UInt8(templatesNumbers[i]) ] as [UInt8], length: 1)
+            
+            packet.append(templateNumber as Data)
+        }
+        
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
         
@@ -520,7 +410,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func getActivatedProfileTemplates() {
-        let opCode: UInt16 = CommandControlOpCodes.get_activated_profile_templates.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.getActivatedProfileTemplates.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -534,7 +424,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func startPriming() {
-        let opCode: UInt16 = CommandControlOpCodes.start_priming.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.startPriming.rawValue
         let primingAmount: Float = 3.5
         let primingAmountValue: Int = Int(primingAmount.floatToShortFloat())
         
@@ -552,7 +442,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func stopPriming() {
-        let opCode: UInt16 = CommandControlOpCodes.stop_priming.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.stopPriming.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -566,7 +456,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func setInitialReservoirFillLevel() {
-        let opCode: UInt16 = CommandControlOpCodes.set_initial_reservoir_fill_level.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setInitialReservoirFillLevel.rawValue
         let initialReservoirFillLevel: Float = 5.0
         let initialReservoirFillLevelValue: Int = Int(initialReservoirFillLevel.floatToShortFloat())
         
@@ -584,7 +474,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func resetReservoirInsulinOperationTime() {
-        let opCode: UInt16 = CommandControlOpCodes.reset_reservoir_insulin_operation_time.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.resetReservoirInsulinOperationTime.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -598,12 +488,12 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     //pg 141
-    public func readISFProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.read_isf_profile_template.rawValue
+    public func readISFProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.readISFProfileTemplate.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x01, // template number
+                                           templateNumber,
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -613,15 +503,15 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func writeISFProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.write_isf_profile_template.rawValue
+    public func writeISFProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.writeISFProfileTemplate.rawValue
         let firstDuration: UInt16 = 5
         let firstISF: Float = 2.1
         let firstISFValue: Int = Int(firstISF.floatToShortFloat())
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            0x01, // flags [end transaction: true]
-                                           0x01, // ISF Profile Template Number
+                                           templateNumber,
                                            0x01, // First Time Block Number Index
                                            UInt8(firstDuration & 0xff),
                                            UInt8(firstDuration >> 8),
@@ -636,12 +526,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func readI2CHORatioProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.read_i2cho_ratio_profile_template.rawValue
+    public func readI2CHORatioProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.readI2CHORatioProfileTemplate.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x01, //I2CHO Ratio Profile Template Number
+                                           templateNumber, //I2CHO Ratio Profile Template Number
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -652,15 +542,15 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     //TO-DO
-    public func writeI2CHORatioProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.write_i2cho_ratio_profile_template.rawValue
+    public func writeI2CHORatioProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.writeI2CHORatioProfileTemplate.rawValue
         let firstDuration: UInt16 = 5
         let firstI2CHO: Float = 2.1
         let firstI2CHOValue: Int = Int(firstI2CHO.floatToShortFloat())
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x01, // flags [end transaction: true]
-                                           0x01, // I2CHO Ratio Profile Template Number
+                                           0x01, // flags [end transaction: true], second and third time blocks not present
+                                           templateNumber, // I2CHO Ratio Profile Template Number
                                            0x01, // First Time Block Number Index
                                            UInt8(firstDuration & 0xff),
                                            UInt8(firstDuration >> 8),
@@ -675,12 +565,12 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func readTargetGlucoseRangeProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.read_target_glucose_range_profile_template.rawValue
+    public func readTargetGlucoseRangeProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.readTargetGlucoseRangeProfileTemplate.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           0x01, // Target Glucose Range Profile Template Number
+                                           templateNumber,
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
@@ -690,26 +580,34 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func writeTargetGlucoseRangeProfileTemplate() {
-        let opCode: UInt16 = CommandControlOpCodes.write_target_glucose_range_profile_template.rawValue
+    public func writeTargetGlucoseRangeProfileTemplate(templateNumber: UInt8) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.writeTargetGlucoseRangeProfileTemplate.rawValue
         let firstDuration: UInt16 = 5
         let firstLowerTargetGlucoseLimit: Float = 2.9
         let firstLowerTargetGlucoseLimitValue: Int = Int(firstLowerTargetGlucoseLimit.floatToShortFloat())
         let firstUpperTargetGlucoseLimit: Float = 8.5
         let firstUpperTargetGlucoseLimitValue: Int = Int(firstUpperTargetGlucoseLimit.floatToShortFloat())
         
-        let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
-                                           UInt8(opCode >> 8),
-                                           0x01, // flags [end transactiom: true, second time block present: false]
-                                           0x01, // target Glucose Range Profile Template Number
-                                           0x01, // first Time Block Number Index
-                                           UInt8(firstDuration & 0xff),
-                                           UInt8(firstDuration >> 8),
-                                           UInt8(firstLowerTargetGlucoseLimitValue & 0xff),
-                                           UInt8(firstLowerTargetGlucoseLimitValue >> 8),
-                                           UInt8(firstUpperTargetGlucoseLimitValue & 0xff),
-                                           UInt8(firstUpperTargetGlucoseLimitValue >> 8),
-                                           0x00] as [UInt8], length: 12)
+        let packet = NSMutableData(bytes: [ UInt8(opCode & 0xff),
+                                            UInt8(opCode >> 8),
+                                            0x01, // flags [end transactiom: true, second time block present: false]
+                                            templateNumber, // target Glucose Range Profile Template Number
+                                            0x01, // first Time Block Number Index
+                                            UInt8(firstDuration & 0xff),
+                                            UInt8(firstDuration >> 8),
+                                            UInt8(firstLowerTargetGlucoseLimitValue & 0xff),
+                                            UInt8(firstLowerTargetGlucoseLimitValue >> 8),
+                                            //UInt8(firstUpperTargetGlucoseLimitValue & 0xff),
+                                            //UInt8(firstUpperTargetGlucoseLimitValue >> 8),
+                                            //0x00] as [UInt8], length: 10)
+                                            ] as [UInt8], length: 9)
+        // this block of code is needed as the packet declaration with length of 12 throws error:
+        // 'Expression was too complex to be solved in reasonable time; consider breaking up the expression into distinct sub-expressions'
+        let upperTarget = NSMutableData(bytes: [ UInt8(firstUpperTargetGlucoseLimitValue & 0xff),
+                                            UInt8(firstUpperTargetGlucoseLimitValue >> 8),
+                                            0x00] as [UInt8], length: 3)
+        packet.append(upperTarget as Data)
+        
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
         
@@ -719,7 +617,7 @@ public class IDSCommandControlPoint: NSObject {
     }
     
     public func getMaxBolusAmount() {
-        let opCode: UInt16 = CommandControlOpCodes.get_max_bolus_amount.rawValue
+        let opCode: UInt16 = IDSOpCodes.OpCodes.getMaxBolusAmount.rawValue
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
@@ -732,9 +630,8 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    public func setMaxBolusAmount() {
-        let opCode: UInt16 = CommandControlOpCodes.set_max_bolus_amount.rawValue
-        let maxBolusAmount: Float = 9.0
+    public func setMaxBolusAmount(maxBolusAmount: Float) {
+        let opCode: UInt16 = IDSOpCodes.OpCodes.setMaxBolusAmount.rawValue
         let maxBolusAmountValue: Int = Int(maxBolusAmount.floatToShortFloat())
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
@@ -748,5 +645,231 @@ public class IDSCommandControlPoint: NSObject {
         if let peripheral = self.peripheral {
             Bluetooth.sharedInstance().writeCharacteristic((peripheral.findCharacteristicByUUID(idsCommandControlPointCharacteristic)!), data: packet as Data)
         }
+    }
+    
+    //
+    public func parseIDSCommandControlPointResponse(data: NSData) {
+        print("parseIDSCommandControlPointResponse")
+        
+        let responseCode: UInt16 = (data.subdata(with: NSRange(location:0, length: 2)) as NSData!).decode()
+        switch responseCode {
+        case IDSOpCodes.OpCodes.responseCode.rawValue:
+            parseIDSCommandControlPointResponseCodePacket(data: data)
+        case IDSOpCodes.OpCodes.snoozeAnnunciationResponse.rawValue:
+            parseSnoozeAnnunciationResponse(data: data)
+        case IDSOpCodes.OpCodes.confirmAnnunciationResponse.rawValue:
+            parseConfirmAnnunciationResponse(data: data)
+        case IDSOpCodes.OpCodes.writeBasalRateProfileTemplateResponse.rawValue:
+            parseWriteBasalRateProfileTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.setBolusResponse.rawValue:
+            parseSetBolusResponse(data: data)
+        case IDSOpCodes.OpCodes.cancelBolusResponse.rawValue:
+            parseCancelBolusResponse(data: data)
+        case IDSOpCodes.OpCodes.getAvailableBolusesResponse.rawValue:
+            parseGetAvailableBoluses(data: data)
+        case IDSOpCodes.OpCodes.getBolusTemplateResponse.rawValue:
+            parseGetBolusTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.setBolusTemplateResponse.rawValue:
+            parseSetBolusTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.getTBRTemplateResponse.rawValue:
+            parseGetTBRTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.setTBRTemplateResponse.rawValue:
+            parseSetTBRTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.resetTemplateStatusResponse.rawValue:
+            parseResetTemplateStatus(data: data)
+        case IDSOpCodes.OpCodes.activateProfileTemplatesResponse.rawValue:
+            parseActivateProfileTemplatesResonse(data: data)
+        case IDSOpCodes.OpCodes.getActivatedProfileTemplatesResponse.rawValue:
+            parseGetActivateProfileTemplatesResonse(data: data)
+        case IDSOpCodes.OpCodes.writeISFProfileTemplateResponse.rawValue:
+            parseWriteISFProfileTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.writeI2CHORatioProfileTemplateResponse.rawValue:
+            parseWriteI2CHOProfileTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.writeTargetGlucoseRangeProfileTemplateResponse.rawValue:
+            parseWriteTargetGlucoseTemplateResponse(data: data)
+        case IDSOpCodes.OpCodes.getMaxBolusAmountResponse.rawValue:
+            parseGetMaxBolusAmountResponse(data: data)
+        default:
+            ()
+        }
+    }
+    
+    func parseIDSCommandControlPointResponseCodePacket(data: NSData) {
+        print("parseIDSCommandDataResponseCodePacket")
+        let opCode: UInt16 = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!).decode()
+        let response: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        idsCommandControlPointDelegate?.commandControlPointResponseCode(code: opCode, error: response)
+    }
+    
+    func parseSnoozeAnnunciationResponse(data: NSData) {
+        print("parseSnoozeAnnunciationResponse")
+        
+        let snoozedAnnunciationBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
+        let snoozedAnnunciation: UInt16 = (snoozedAnnunciationBytes?.decode())!
+        idsCommandControlPointDelegate?.snoozedAnnunciation(annunciation: snoozedAnnunciation)
+    }
+    
+    func parseConfirmAnnunciationResponse(data: NSData) {
+        print("parseConfirmAnnunciationResponse")
+        
+        let confirmedAnnunciationBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
+        let confirmedAnnunciation: UInt16 = (confirmedAnnunciationBytes?.decode())!
+        idsCommandControlPointDelegate?.confirmedAnnunciation(annunciation: confirmedAnnunciation)
+    }
+    
+    //TO-DO: store responses until flags bit 0 = 1
+    func parseWriteBasalRateProfileTemplateResponse(data: NSData) {
+        print("parseWriteBasalRateProfileTemplateResponse")
+        let flags: Int = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        //let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        //let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        if flags.bit(0) == 1 {
+            idsCommandControlPointDelegate?.writeBasalRateProfileTemplateResponse()
+        }
+    }
+    
+    func parseSetBolusResponse(data: NSData) {
+        print("parseSetBolusResponse")
+        let bolusID: UInt16 = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!).decode()
+        idsCommandControlPointDelegate?.setBolusResponse(bolusID: bolusID)
+    }
+    
+    func parseCancelBolusResponse(data: NSData) {
+        print("parseCancelBolusResponse")
+        let bolusID: UInt16 = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!).decode()
+        idsCommandControlPointDelegate?.cancelBolusResponse(bolusID: bolusID)
+    }
+    
+    func parseGetAvailableBoluses(data: NSData) {
+        print("parseGetAvailableBoluses")
+        let availableBoluses: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        idsCommandControlPointDelegate?.getAvailableBolusResponse(availableBoluses: availableBoluses)
+    }
+    
+    public func parseGetBolusTemplateResponse(data: NSData) {
+        print("parseGetBolusTemplateResponse")
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let flags: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let bolusType: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let bolusFastAmount: Float = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!).shortFloatToFloat()
+        let bolusExtendedAmount: Float = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!).shortFloatToFloat()
+        let bolusDurationAmount: UInt16 = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!).decode()
+        var bolusDelayTime: UInt16 = 0
+        
+        if Int(flags).bit(0).toBool()! {
+            bolusDelayTime = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!).decode()
+        }
+        
+        let bolusTemplate = BolusTemplate(templateNumber: templateNumber,
+                                          bolusType: bolusType,
+                                          bolusFastAmount: bolusFastAmount,
+                                          bolusExtendedAmount: bolusExtendedAmount,
+                                          bolusDuration: bolusDurationAmount,
+                                          bolusDelayTime: bolusDelayTime)
+        
+        print(bolusTemplate)
+        
+        idsCommandControlPointDelegate?.getBolusTemplateResponse(template: bolusTemplate)
+    }
+    
+    public func parseSetBolusTemplateResponse(data: NSData) {
+        print("parseSetBolusTemplateResponse")
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        print("template number: \(templateNumber)")
+        idsCommandControlPointDelegate?.setBolusTemplateResponse(template: templateNumber)
+    }
+    
+    public func parseGetTBRTemplateResponse(data: NSData) {
+        print("parseGetTBRTemplateResponse")
+        
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let type: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        let adjustmentValue = (data.subdata(with: NSRange(location:4, length: 2)) as NSData!).shortFloatToFloat()
+        let duration: UInt16 = (data.subdata(with: NSRange(location:6, length: 2)) as NSData!).decode()
+        
+        let tbrTemplate = TBRTemplate(templateNumber: templateNumber,
+                                      type: type,
+                                      adjustmentValue: adjustmentValue,
+                                      duration: duration)
+        
+        print(tbrTemplate)
+        
+        idsCommandControlPointDelegate?.getTBRTemplateResponse(template: tbrTemplate)
+    }
+    
+    public func parseSetTBRTemplateResponse(data: NSData) {
+        print("parseSetTBRTemplateResponse")
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        
+        print("template number: \(templateNumber)")
+        idsCommandControlPointDelegate?.setTBRTemplateResponse(templateNumber: templateNumber)
+    }
+    
+    public func parseResetTemplateStatus(data: NSData) {
+        print("parseResetTemplateStatus")
+        
+        var resetTemplates = [UInt8]()
+        
+        let numberOfResetTemplates: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        for x in 0...(numberOfResetTemplates-1) {
+            let templateNumber: UInt8 = (data.subdata(with: NSRange(location:(Int(x) + 3), length: 1)) as NSData!).decode()
+            resetTemplates.append(templateNumber)
+        }
+        idsCommandControlPointDelegate?.resetProfileTemplates(templates: resetTemplates)
+    }
+    
+    public func parseActivateProfileTemplatesResonse(data: NSData) {
+        print("parseActivateProfileTemplatesResonse")
+        
+        var activatedTemplates = [UInt8]()
+        
+        let numberOfActivatedTemplates: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        for x in 0...(numberOfActivatedTemplates-1) {
+            let templateNumber: UInt8 = (data.subdata(with: NSRange(location:(Int(x) + 3), length: 1)) as NSData!).decode()
+            activatedTemplates.append(templateNumber)
+        }
+        idsCommandControlPointDelegate?.activateProfileTemplates(templates: activatedTemplates)
+    }
+    
+    public func parseGetActivateProfileTemplatesResonse(data: NSData) {
+        print("parseGetActivateProfileTemplatesResonse")
+        
+        var activatedTemplates = [UInt8]()
+        
+        let numberOfActivatedTemplates: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        if numberOfActivatedTemplates > 0 {
+            for x in 0...(numberOfActivatedTemplates-1) {
+                let templateNumber: UInt8 = (data.subdata(with: NSRange(location:(Int(x) + 3), length: 1)) as NSData!).decode()
+                activatedTemplates.append(templateNumber)
+            }
+        }
+        idsCommandControlPointDelegate?.activatedProfileTemplates(templates: activatedTemplates)
+    }
+    
+    public func parseWriteISFProfileTemplateResponse(data: NSData) {
+        print("parseWriteISFProfileTemplateResponse")
+        //let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        //let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        
+        idsCommandControlPointDelegate?.writeISFProfileTemplateResponse(templateNumber: templateNumber)
+    }
+    
+    public func parseWriteI2CHOProfileTemplateResponse(data: NSData) {
+        print("parseWriteI2CHOProfileTemplateResponse")
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        idsCommandControlPointDelegate?.writeI2CHOProfileTemplateResponse(templateNumber: templateNumber)
+    }
+
+    public func parseWriteTargetGlucoseTemplateResponse(data: NSData) {
+        print("parseWriteTargetGlucoseTemplateResponse")
+        let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
+        idsCommandControlPointDelegate?.writeTargetGlucoseRangeProfileTemplateResponse(templateNumber: templateNumber)
+    }
+    
+    public func parseGetMaxBolusAmountResponse(data: NSData) {
+        print("parseGetMaxBolusAmountResponse")
+        let maxBolusAmount = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!).shortFloatToFloat()
+        idsCommandControlPointDelegate?.getMaxBolusAmountResponse(bolusAmount: maxBolusAmount)
     }
 }

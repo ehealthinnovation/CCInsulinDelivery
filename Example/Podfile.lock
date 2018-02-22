@@ -1,10 +1,10 @@
 PODS:
-  - CCBluetooth (0.5.8):
+  - CCBluetooth (0.5.9):
     - CCToolbox
   - CCInsulinDelivery (0.1.0):
     - CCBluetooth
     - CCToolbox
-  - CCToolbox (0.8.3)
+  - CCToolbox (0.8.5)
 
 DEPENDENCIES:
   - CCBluetooth (from `https://github.com/uhnmdi/CCBluetooth.git`)
@@ -21,16 +21,16 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   CCBluetooth:
-    :commit: 84786c1c0a986505a51cfbc7a01b07b5ccb6f750
+    :commit: 4a0b7ad2a62c78db6e5bb3b951874a2f27160cf5
     :git: https://github.com/uhnmdi/CCBluetooth.git
   CCToolbox:
-    :commit: 3b794993353b7f34b859ea8b67a4f0e8c71d6284
+    :commit: 403cff47e08a9f64ecfad64b1045f0b85794f601
     :git: https://github.com/uhnmdi/CCToolbox.git
 
 SPEC CHECKSUMS:
-  CCBluetooth: cc605544b86213b99de03976dc57dae8a7660e4e
+  CCBluetooth: 43a4c57f6bc6c3c26f63a69c62254cd0dc715750
   CCInsulinDelivery: 77f6aba089e49bcbc5d22ae7f202cf627024df40
-  CCToolbox: 1a8d1739ae7f1a9011d16c229f0643b10dcee05f
+  CCToolbox: 5d23c13ba8da680a5b2a2258117e74b9c2b90cdb
 
 PODFILE CHECKSUM: 3e4faa9ef2cd767e17b11c563d315a1cf4bb70a1
 
