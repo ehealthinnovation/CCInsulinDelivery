@@ -76,18 +76,18 @@ public class IDSStatus : NSObject {
     public init(data: NSData?) {
         print("IDSStatus#init - \(String(describing: data))")
         
-        let therapyControlStateByte = (data?.subdata(with: NSRange(location: 0, length: 1)) as NSData!)
+        let therapyControlStateByte = (data?.subdata(with: NSRange(location: 0, length: 1)) as NSData?)
         therapyControlStateByte?.getBytes(&therapyControlState, length: MemoryLayout<UInt8>.size)
         
-        let operationalStateByte = (data?.subdata(with: NSRange(location: 1, length: 1)) as NSData!)
+        let operationalStateByte = (data?.subdata(with: NSRange(location: 1, length: 1)) as NSData?)
         operationalStateByte?.getBytes(&operationalState, length: MemoryLayout<UInt8>.size)
         
-        let reservoirRemainingBytes = (data?.subdata(with: NSRange(location: 2, length: 2)) as NSData!)
+        let reservoirRemainingBytes = (data?.subdata(with: NSRange(location: 2, length: 2)) as NSData?)
         reservoirRemainingAmount = (reservoirRemainingBytes?.shortFloatToFloat())!
         print("Reservoir Remaining Amount: \(reservoirRemainingAmount)")
         
         var reservoirAttachedValue = 0
-        let reservoirAttachedByte = (data?.subdata(with: NSRange(location: 4, length: 1)) as NSData!)
+        let reservoirAttachedByte = (data?.subdata(with: NSRange(location: 4, length: 1)) as NSData?)
         reservoirAttachedByte?.getBytes(&reservoirAttachedValue, length: MemoryLayout<UInt8>.size)
         reservoirAttached = reservoirAttachedValue.bit(reservoirAttachedBit).toBool()
         print("Reservoir Attached: \(String(describing: reservoirAttached))")

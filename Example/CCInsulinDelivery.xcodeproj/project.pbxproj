@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		500C1510204DE4EE00430FE0 /* SessionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500C150F204DE4EE00430FE0 /* SessionViewController.swift */; };
+		5015AF502061477100C157E7 /* Refreshable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5015AF4F2061477100C157E7 /* Refreshable.swift */; };
+		5015AF53206148C000C157E7 /* FHIR.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5015AF52206148C000C157E7 /* FHIR.swift */; };
+		5015AF782061913A00C157E7 /* IDSFhir.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5015AF772061913A00C157E7 /* IDSFhir.swift */; };
 		50E7483D1F699BAC004F69AC /* IDSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E7483C1F699BAC004F69AC /* IDSViewController.swift */; };
 		607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACD51AFB9204008FA782 /* AppDelegate.swift */; };
 		607FACD81AFB9204008FA782 /* DiscoveryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACD71AFB9204008FA782 /* DiscoveryViewController.swift */; };
@@ -32,6 +36,10 @@
 		103D17F8F2161C2ECF4FCADF /* Pods_CCInsulinDelivery_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CCInsulinDelivery_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B0A6F9EE9EDC189BE59B8C8 /* CCInsulinDelivery.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = CCInsulinDelivery.podspec; path = ../CCInsulinDelivery.podspec; sourceTree = "<group>"; };
 		44866245066E776EF8462270 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
+		500C150F204DE4EE00430FE0 /* SessionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionViewController.swift; sourceTree = "<group>"; };
+		5015AF4F2061477100C157E7 /* Refreshable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Refreshable.swift; sourceTree = "<group>"; };
+		5015AF52206148C000C157E7 /* FHIR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FHIR.swift; sourceTree = "<group>"; };
+		5015AF772061913A00C157E7 /* IDSFhir.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IDSFhir.swift; sourceTree = "<group>"; };
 		50E7483C1F699BAC004F69AC /* IDSViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IDSViewController.swift; sourceTree = "<group>"; };
 		5CE8E7561CF370598489E336 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		607FACD01AFB9204008FA782 /* CCInsulinDelivery_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CCInsulinDelivery_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +90,15 @@
 			name = Pods;
 			sourceTree = "<group>";
 		};
+		5015AF51206148AD00C157E7 /* FHIR */ = {
+			isa = PBXGroup;
+			children = (
+				5015AF772061913A00C157E7 /* IDSFhir.swift */,
+				5015AF52206148C000C157E7 /* FHIR.swift */,
+			);
+			name = FHIR;
+			sourceTree = "<group>";
+		};
 		53C06B4F97B317FB854DDF9B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -115,9 +132,12 @@
 		607FACD21AFB9204008FA782 /* Example for CCInsulinDelivery */ = {
 			isa = PBXGroup;
 			children = (
+				5015AF51206148AD00C157E7 /* FHIR */,
+				5015AF4F2061477100C157E7 /* Refreshable.swift */,
 				607FACD51AFB9204008FA782 /* AppDelegate.swift */,
 				607FACD71AFB9204008FA782 /* DiscoveryViewController.swift */,
 				50E7483C1F699BAC004F69AC /* IDSViewController.swift */,
+				500C150F204DE4EE00430FE0 /* SessionViewController.swift */,
 				607FACD91AFB9204008FA782 /* Main.storyboard */,
 				607FACDC1AFB9204008FA782 /* Images.xcassets */,
 				607FACDE1AFB9204008FA782 /* LaunchScreen.xib */,
@@ -294,12 +314,14 @@
 				"${BUILT_PRODUCTS_DIR}/CCBluetooth/CCBluetooth.framework",
 				"${BUILT_PRODUCTS_DIR}/CCInsulinDelivery/CCInsulinDelivery.framework",
 				"${BUILT_PRODUCTS_DIR}/CCToolbox/CCToolbox.framework",
+				"${BUILT_PRODUCTS_DIR}/SMART/SMART.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/CCBluetooth.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/CCInsulinDelivery.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/CCToolbox.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SMART.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -379,8 +401,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5015AF502061477100C157E7 /* Refreshable.swift in Sources */,
 				50E7483D1F699BAC004F69AC /* IDSViewController.swift in Sources */,
+				500C1510204DE4EE00430FE0 /* SessionViewController.swift in Sources */,
 				607FACD81AFB9204008FA782 /* DiscoveryViewController.swift in Sources */,
+				5015AF53206148C000C157E7 /* FHIR.swift in Sources */,
+				5015AF782061913A00C157E7 /* IDSFhir.swift in Sources */,
 				607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

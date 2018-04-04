@@ -55,11 +55,11 @@ public class IDSFeatures : NSObject {
         print("IDSFeatures#init - \(String(describing: data))")
         
         let packet = self.reverseData(data: data!)
-        let featureBytes = (packet.subdata(with: NSRange(location:1, length: 2)) as NSData!)
+        let featureBytes = (packet.subdata(with: NSRange(location:1, length: 2)) as NSData?)
         var featureBits:Int = 0
         featureBytes?.getBytes(&featureBits, length: MemoryLayout<UInt32>.size)
         
-        let insulinConcentrationBytes = (data?.subdata(with: NSRange(location:3, length: 2)) as NSData!)
+        let insulinConcentrationBytes = (data?.subdata(with: NSRange(location:3, length: 2)) as NSData?)
         insulinConcentration = insulinConcentrationBytes!.shortFloatToFloat()
         
         e2eProtectionSupported = featureBits.bit(e2eProtectionSupportedBit).toBool()

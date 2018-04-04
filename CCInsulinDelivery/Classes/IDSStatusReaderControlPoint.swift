@@ -17,12 +17,12 @@ public protocol IDSStatusReaderControlPointProtcol {
     func statusReaderResponseCode(code: UInt16, error: UInt8)
     func resetStatusUpdated(responseCode: UInt8)
     func numberOfActiveBolusIDS(count: UInt8)
-    func bolusActiveDelivery(bolusDelivery: String)
-    func basalActiveDelivery(basalDelivery: String)
-    func totalDailyInsulinDeliveredStatus(status: String)
-    func counterValues(counter: String)
-    func deliveredInsulin(insulinAmount: String)
-    func insulinOnBoard(insulinAmount: String)
+    func bolusActiveDelivery(bolusDelivery: ActiveBolusDelivery)
+    func basalActiveDelivery(basalDelivery: ActiveBasalRateDelivery)
+    func totalDailyInsulinDeliveredStatus(status: TotalDailyInsulinDeliveredStatus)
+    func counterValues(counter: Counter)
+    func deliveredInsulin(insulinAmount: DeliveredInsulin)
+    func insulinOnBoard(insulinAmount: InsulinOnBoard)
 }
 
 public class IDSStatusReaderControlPoint: NSObject {
@@ -42,51 +42,13 @@ public class IDSStatusReaderControlPoint: NSObject {
     
     public var activeBolusDeliveries = [ActiveBolusDelivery]()
     
-    public class ActiveBolusDelivery: Codable {
-        let bolusID: String
-        let bolusType: String
-        let bolusFastAmount: String?
-        let bolusExtendedAmount: String?
-        let bolusDuration: String?
-        let bolusDelayTime: String?
-        let bolusTemplateNumber: String?
-        let bolusActivationType: String?
+    public var bolusDelayTimePresentBit = 0
+    public var bolusTemplateNumberPresentBit = 1
+    public var bolusActivationTypePresentBit = 2
+    public var bolusDeliveryReasonCorrectionBit = 3
+    public var bolusDeliveryReasonMealBit = 4
     
-        init(bolusID: String, bolusType: String, bolusFastAmount: String?, bolusExtendedAmount: String?, bolusDuration: String?, bolusDelayTime: String?, bolusTemplateNumber: String?, bolusActivationType: String?) {
-            self.bolusID = bolusID
-            self.bolusType = bolusType
-            self.bolusFastAmount = bolusFastAmount
-            self.bolusExtendedAmount = bolusExtendedAmount
-            self.bolusDuration = bolusDuration
-            self.bolusDelayTime = bolusDelayTime
-            self.bolusTemplateNumber = bolusTemplateNumber
-            self.bolusActivationType = bolusActivationType
-        }
-    }
-    
-    public class ActiveBasalRateDelivery: Codable {
-        let profileTemplateNumber: String
-        let currentConfigValue: String
-        let tbrType: String?
-        let tbrAdjustmentValue: String?
-        let tbrDurationProgrammed: String?
-        let tbrDurationRemaining: String?
-        let tbrTemplateNumber: String?
-        let context: String?
-        
-        init(profileTemplateNumber: String, currentConfigValue: String, tbrType: String?, tbrAdjustmentValue: String?, tbrDurationProgrammed: String?, tbrDurationRemaining: String?, tbrTemplateNumber: String?, context: String?) {
-                self.profileTemplateNumber = profileTemplateNumber
-                self.currentConfigValue = currentConfigValue
-                self.tbrType = tbrType
-                self.tbrAdjustmentValue = tbrAdjustmentValue
-                self.tbrDurationProgrammed = tbrDurationProgrammed
-                self.tbrDurationRemaining = tbrDurationRemaining
-                self.tbrTemplateNumber = tbrTemplateNumber
-                self.context = context
-        }
-    }
-    
-    public class TotalDailyInsulinDeliveredStatus: Codable {
+    /*public class TotalDailyInsulinDeliveredStatus: Codable {
         let sumOfBolusDelivered: String
         let sumOfBasalDelivered: String
         let sumOfBolusAndBasalDelivered: String?
@@ -96,14 +58,7 @@ public class IDSStatusReaderControlPoint: NSObject {
             self.sumOfBasalDelivered = sumOfBasalDelivered
             self.sumOfBolusAndBasalDelivered = sumOfBolusAndBasalDelivered
         }
-    }
-    
-    private var bolusDelayTimePresentBit = 0
-    private var bolusTemplateNumberPresentBit = 1
-    private var bolusActivationTypePresentBit = 2
-    private var bolusDeliveryReasonCorrectionBit = 3
-    private var bolusDeliveryReasonMealBit = 4
-    
+    }*/
     
     @objc public enum StatusReaderOpCodes: UInt16 {
         case response_code = 0x0303,
@@ -300,38 +255,6 @@ public class IDSStatusReaderControlPoint: NSObject {
         }
     }
     
-    public class Counter: Codable {
-        let counterType: String
-        let counterValueSelection: String
-        let counterValue: String?
-        
-        init(counterType: String, counterValueSelection: String, counterValue: String?) {
-            self.counterType = counterType
-            self.counterValueSelection = counterValueSelection
-            self.counterValue = counterValue
-        }
-    }
-    
-    public class DeliveredInsulin: Codable {
-        let bolusAmountDelivered: String
-        let basalAmountDelivered: String
-        
-        init(bolusAmountDelivered: String, basalAmountDelivered: String) {
-            self.bolusAmountDelivered = bolusAmountDelivered
-            self.basalAmountDelivered = basalAmountDelivered
-        }
-    }
-    
-    public class InsulinOnBoard: Codable {
-        let insulinOnBoard: String
-        let remainingDuration: String
-        
-        init(insulinOnBoard: String, remainingDuration: String) {
-            self.insulinOnBoard = insulinOnBoard
-            self.remainingDuration = remainingDuration
-        }
-    }
-    
     public class func sharedInstance() -> IDSStatusReaderControlPoint {
         if thisIDSStatusReaderControlPoint == nil {
             thisIDSStatusReaderControlPoint = IDSStatusReaderControlPoint()
@@ -354,11 +277,10 @@ public class IDSStatusReaderControlPoint: NSObject {
     public func parseIDSStatusReaderControlPointResponse(data: NSData) {
         print("parseIDSStatusReaderControlPointResponse")
         
-        let opCodeBytes = (data.subdata(with: NSRange(location:0, length: 2)) as NSData!)
-        let opCode: UInt16 = (opCodeBytes?.decode())!
+        let opCode: UInt16 = (data.subdata(with: NSRange(location:0, length: 2)) as NSData).decode()
+        //let opCode: UInt16 = (opCodeBytes?.decode())!
             switch opCode {
             case StatusReaderOpCodes.response_code.rawValue:
-                print("response code")
                 self.parseResponseCodeOpCode(data: data)
             case StatusReaderOpCodes.get_active_bolus_ids_response.rawValue:
                 self.parseGetActiveBolusIDSResponse(data: data)
@@ -380,12 +302,12 @@ public class IDSStatusReaderControlPoint: NSObject {
     }
     
     public func parseResponseCodeOpCode(data: NSData) {
-        let opCode: Int = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!).decode()
-        let operand: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+        let opCode: Int = (data.subdata(with: NSRange(location:2, length: 2)) as NSData).decode()
+        let operand: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData).decode()
         
         switch(opCode) {
             case Int(StatusReaderOpCodes.reset_status.rawValue):
-                let response: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
+                let response: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData).decode()
                 idsStatusReaderControlPointDelegate?.resetStatusUpdated(responseCode: response)
             case Int(StatusReaderOpCodes.get_active_bolus_ids.rawValue):
                 //print("get_active_bolus_ids error")
@@ -398,13 +320,12 @@ public class IDSStatusReaderControlPoint: NSObject {
     }
     
     func parseGetActiveBolusIDSResponse(data: NSData) {
-        let number = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!)
-        let numberOfActiveBolusIDS: UInt8 = number!.decode()
+        let numberOfActiveBolusIDS: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
         var j: Int = 0
         
         activeBolusIDS.removeAll()
         for i in 0 ..< Int(numberOfActiveBolusIDS) {
-            let bolusID: UInt16 = (data.subdata(with: NSRange(location:i + j + 3, length: 2)) as NSData!).decode()
+            let bolusID: UInt16 = (data.subdata(with: NSRange(location:i + j + 3, length: 2)) as NSData).decode()
             activeBolusIDS.append(bolusID)
             j += 1
         }
@@ -412,60 +333,42 @@ public class IDSStatusReaderControlPoint: NSObject {
     }
     
     func parseGetActiveBolusDeliveryResponse(data: NSData) {
-        var fastRemainingAmount: Float = 0
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
+        let bolusID: UInt16 = (data.subdata(with: NSRange(location:3, length: 2)) as NSData).decode()
+        let bolusType: UInt8 = (data.subdata(with: NSRange(location:5, length: 1)) as NSData).decode()
+        let fastAmount = (data.subdata(with: NSRange(location:6, length: 2)) as NSData).shortFloatToFloat()
+        let extendedAmount = (data.subdata(with: NSRange(location:8, length: 2)) as NSData).shortFloatToFloat()
+        let duration: UInt16 = (data.subdata(with: NSRange(location:10, length: 2)) as NSData).decode()
         
-        let bolusIDBytes  = (data.subdata(with: NSRange(location:3, length: 2)) as NSData!).swapUInt16Data()
-        let bolusID: UInt16 = bolusIDBytes.decode()
-        let bolusTypeByte  = (data.subdata(with: NSRange(location:5, length: 1)) as NSData!)
-        let bolusType: UInt8 = (bolusTypeByte?.decode())!
- 
-        switch(BolusType(rawValue: bolusType)!.description) {
-            case "Undetermined":
-                print("Undetermined")
-            case "Fast":
-                print("Fast")
-                let fastRemainingAmountBytes  = (data.subdata(with: NSRange(location:6, length: 2)) as NSData!)
-                fastRemainingAmount = (fastRemainingAmountBytes?.shortFloatToFloat())!
-            case "Extended":
-                print("Extended")
-            case "Multiwave":
-                print("Multiwave")
-            default:
-                ()
+        var delay: UInt16 = 0
+        if Int(flags).bit(IDSStatusReaderControlPoint.sharedInstance().bolusDelayTimePresentBit).toBool()! {
+            delay = (data.subdata(with: NSRange(location:12, length: 2)) as NSData).decode()
         }
         
-        let bolusDelayBytes  = (data.subdata(with: NSRange(location:12, length: 2)) as NSData!).swapUInt16Data()
-        let bolusDelay: UInt16 = bolusDelayBytes.decode()
+        var templateNumber: UInt8 = 0
+        if Int(flags).bit(IDSStatusReaderControlPoint.sharedInstance().bolusTemplateNumberPresentBit).toBool()! {
+            templateNumber = (data.subdata(with: NSRange(location:14, length: 1)) as NSData).decode()
+        }
         
-        let bolusTemplateNumberBytes  = (data.subdata(with: NSRange(location:14, length: 1)) as NSData!)
-        let bolusTemplateNumber: UInt8 = (bolusTemplateNumberBytes?.decode())!
+        var activation: UInt8 = 0x0F
+        if Int(flags).bit(IDSStatusReaderControlPoint.sharedInstance().bolusActivationTypePresentBit).toBool()! {
+            activation = (data.subdata(with: NSRange(location:15, length: 1)) as NSData).decode()
+        }
         
-        let bolusActivationBytes  = (data.subdata(with: NSRange(location:15, length: 1)) as NSData!)
-        let bolusActivation: UInt8 = (bolusActivationBytes?.decode())!
-        
-        let bolusDeliveryDetails = ActiveBolusDelivery(bolusID: bolusID.description,
+        let bolusDeliveryDetails = ActiveBolusDelivery(flags: flags,
+                                           bolusID: bolusID,
                                            bolusType: BolusType(rawValue: bolusType)!.description,
-                                           bolusFastAmount: fastRemainingAmount.description,
-                                           bolusExtendedAmount: "",
-                                           bolusDuration: "",
-                                           bolusDelayTime: bolusDelay.description,
-                                           bolusTemplateNumber: bolusTemplateNumber.description,
-                                           bolusActivationType: BolusActivationType(rawValue: bolusActivation)!.description)
+                                           bolusFastAmount: fastAmount,
+                                           bolusExtendedAmount: extendedAmount,
+                                           bolusDuration: duration,
+                                           bolusDelayTime: delay,
+                                           bolusTemplateNumber: templateNumber,
+                                           bolusActivationType: BolusActivationType(rawValue: activation)!.description)
         
         print(bolusDeliveryDetails)
         
-        addActiveBolusDelivery(delivery: bolusDeliveryDetails)
-        
-        // https://medium.com/@ashishkakkad8/use-of-codable-with-jsonencoder-and-jsondecoder-in-swift-4-71c3637a6c65
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(bolusDeliveryDetails)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsStatusReaderControlPointDelegate?.bolusActiveDelivery(bolusDelivery: jsonString!)
-        }
-        catch {
-        }
+        //addActiveBolusDelivery(delivery: bolusDeliveryDetails)
+        idsStatusReaderControlPointDelegate?.bolusActiveDelivery(bolusDelivery: bolusDeliveryDetails)
     }
     
     // add for now, need to support updating later
@@ -490,153 +393,87 @@ public class IDSStatusReaderControlPoint: NSObject {
     }
     
     func parseGetActiveBasalRateDeliveryResponse(data: NSData) {
-        //let flags = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!)
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
         //let flagBits: UInt8 = self.decode(data: flags!)
         
-        let profileTemplateNumberByte = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!)
-        let profileTemplateNumber: UInt8 = (profileTemplateNumberByte?.decode())!
+        let activeBasalRateProfileTemplateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData).decode()
+        let currentConfigValue: Float  = (data.subdata(with: NSRange(location:4, length: 2)) as NSData).shortFloatToFloat()
+        let tbrType: UInt8 = (data.subdata(with: NSRange(location:6, length: 1)) as NSData).decode()
+        let tbrAdjustmentValue: Float = (data.subdata(with: NSRange(location:7, length: 2)) as NSData).shortFloatToFloat()
+        let tbrDurationProgrammed: UInt16 = (data.subdata(with: NSRange(location:9, length: 2)) as NSData).swapUInt16Data().decode()
+        let tbrDurationRemaining: UInt16 = (data.subdata(with: NSRange(location:11, length: 2)) as NSData).swapUInt16Data().decode()
+        let tbrTemplateNumber: UInt8 = (data.subdata(with: NSRange(location:13, length: 1)) as NSData).decode()
+        let context: UInt8 = (data.subdata(with: NSRange(location:14, length: 1)) as NSData).decode()
         
-        let currentConfigValueBytes = (data.subdata(with: NSRange(location:4, length: 2)) as NSData!)
-        let currentConfigValue: Float = (currentConfigValueBytes?.shortFloatToFloat())!
-        
-        let tbrTypeByte = (data.subdata(with: NSRange(location:6, length: 1)) as NSData!)
-        let tbrType: UInt8 = (tbrTypeByte?.decode())!
-        
-        let tbrAdjustmentValueBytes = (data.subdata(with: NSRange(location:7, length: 2)) as NSData!)
-        let tbrAdjustmentValue: Float = (tbrAdjustmentValueBytes?.shortFloatToFloat())!
-    
-        let tbrDurationProgrammedBytes = (data.subdata(with: NSRange(location:9, length: 2)) as NSData!).swapUInt16Data()
-        let tbrDurationProgrammed: UInt16 = tbrDurationProgrammedBytes.decode()
-    
-        let tbrDurationRemainingBytes = (data.subdata(with: NSRange(location:11, length: 2)) as NSData!).swapUInt16Data()
-        let tbrDurationRemaining: UInt16 = tbrDurationRemainingBytes.decode()
-    
-        let tbrTemplateNumberByte = (data.subdata(with: NSRange(location:13, length: 1)) as NSData!)
-        let tbrTemplateNumber: UInt8 = (tbrTemplateNumberByte?.decode())!
-    
-        let contextByte = (data.subdata(with: NSRange(location:14, length: 1)) as NSData!)
-        let context: UInt8 = (contextByte?.decode())!
-    
-        let activeBasalRateDelivery = ActiveBasalRateDelivery(profileTemplateNumber: profileTemplateNumber.description,
-                                                              currentConfigValue: currentConfigValue.description,
+        let activeBasalRateDelivery = ActiveBasalRateDelivery(flags: flags,
+                                                              profileTemplateNumber: activeBasalRateProfileTemplateNumber,
+                                                              currentConfigValue: currentConfigValue,
                                                               tbrType: tbrType.description,
-                                                              tbrAdjustmentValue: tbrAdjustmentValue.description,
-                                                              tbrDurationProgrammed: tbrDurationProgrammed.description,
-                                                              tbrDurationRemaining: tbrDurationRemaining.description,
-                                                              tbrTemplateNumber: tbrTemplateNumber.description,
+                                                              tbrAdjustmentValue: tbrAdjustmentValue,
+                                                              tbrDurationProgrammed: tbrDurationProgrammed,
+                                                              tbrDurationRemaining: tbrDurationRemaining,
+                                                              tbrTemplateNumber: tbrTemplateNumber,
                                                               context: context.description)
         
         print(activeBasalRateDelivery)
-        
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(activeBasalRateDelivery)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsStatusReaderControlPointDelegate?.basalActiveDelivery(basalDelivery: jsonString!)
-        }
-        catch {
-        }
+        idsStatusReaderControlPointDelegate?.basalActiveDelivery(basalDelivery: activeBasalRateDelivery)
     }
     
     func parseGetTotalDailyInsulinStatus(data: NSData) {
         print("IDSStatusReaderControlPoint#parseGetTotalDailyInsulinStatus")
         
-        let sumOfBolusDeliveredBytes = (data.subdata(with: NSRange(location:2, length: 2)) as NSData!)
-        let sumOfBolusDelivered: Float = (sumOfBolusDeliveredBytes?.shortFloatToFloat())!
+        let sumOfBolusDelivered: Float = (data.subdata(with: NSRange(location:2, length: 2)) as NSData).shortFloatToFloat()
+        //let sumOfBolusDelivered: Float = (sumOfBolusDeliveredBytes?.shortFloatToFloat())!
         
-        let sumOfBasalDeliveredBytes = (data.subdata(with: NSRange(location:4, length: 2)) as NSData!)
-        let sumOfBasalDelivered: Float = (sumOfBasalDeliveredBytes?.shortFloatToFloat())!
+        let sumOfBasalDelivered: Float = (data.subdata(with: NSRange(location:4, length: 2)) as NSData).shortFloatToFloat()
+        //let sumOfBasalDelivered: Float = (sumOfBasalDeliveredBytes?.shortFloatToFloat())!
         
-        let sumOfBolusAndBasalDeliveredBytes = (data.subdata(with: NSRange(location:6, length: 2)) as NSData!)
-        let sumOfBolusAndBasalDelivered: Float = (sumOfBolusAndBasalDeliveredBytes?.shortFloatToFloat())!
-   
-        let totalDailyDelivery = TotalDailyInsulinDeliveredStatus(sumOfBolusDelivered: sumOfBolusDelivered.description,
-                                                                  sumOfBasalDelivered: sumOfBasalDelivered.description,
-                                                                  sumOfBolusAndBasalDelivered: sumOfBolusAndBasalDelivered.description)
+        let totalDailyDelivery = TotalDailyInsulinDeliveredStatus(totalDailyInsulinSumOfBolusDelivered: sumOfBolusDelivered,
+                                                                  totalDailyInsulinSumOfBasalDelivered: sumOfBasalDelivered)
     
         print(totalDailyDelivery)
         
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(totalDailyDelivery)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsStatusReaderControlPointDelegate?.totalDailyInsulinDeliveredStatus(status: jsonString!)
-        }
-        catch {
-        }
+        idsStatusReaderControlPointDelegate?.totalDailyInsulinDeliveredStatus(status: totalDailyDelivery)
     }
     
     func parseGetCounter(data: NSData) {
         print("parseGetCounter")
         
-        let counterTypeByte = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!)
-        let counterType: UInt8 = (counterTypeByte?.decode())!
+        let counterType: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
+        //let counterType: UInt8 = (counterTypeByte?.decode())!
         
-        let counterValueSelectionByte = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!)
-        let counterValueSelection: UInt8 = (counterValueSelectionByte?.decode())!
+        let counterValueSelection: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData).decode()
+        //let counterValueSelection: UInt8 = (counterValueSelectionByte?.decode())!
         
-        let counterValueBytes = (data.subdata(with: NSRange(location:4, length: 4)) as NSData!).swapUInt32Data()
-        let counterValue: UInt32 = counterValueBytes.decode()
+        let counterValueBytes = (data.subdata(with: NSRange(location:4, length: 4)) as NSData).swapUInt32Data()
+        let counterValue: Int32 = counterValueBytes.decode()
         
         let counter = Counter(counterType: counterType.description,
                               counterValueSelection: counterValueSelection.description,
-                              counterValue: counterValue.description)
+                              counterValue: counterValue)
     
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(counter)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsStatusReaderControlPointDelegate?.counterValues(counter: jsonString!)
-        }
-        catch {
-        }
+        idsStatusReaderControlPointDelegate?.counterValues(counter: counter)
     }
     
     func parseDeliveredInsulinResponse(data: NSData) {
         print("parseDeliveredInsulinResponse")
         
-        let bolusAmountDeliveredBytes = (data.subdata(with: NSRange(location:2, length: 4)) as NSData!).swapUInt32Data()
-        let bolusAmountDelivered: Float32 = bolusAmountDeliveredBytes.toFloat()
+        let bolusAmountDelivered: Float32 = (data.subdata(with: NSRange(location:2, length: 4)) as NSData).toFloat()
+        let basalAmountDelivered: Float32 = (data.subdata(with: NSRange(location:6, length: 4)) as NSData).toFloat()
         
-        let basalAmountDeliveredBytes = (data.subdata(with: NSRange(location:6, length: 4)) as NSData!).swapUInt32Data()
-        let basalAmountDelivered: Float32 = basalAmountDeliveredBytes.toFloat()
-        
-        let deliveredInsulin = DeliveredInsulin(bolusAmountDelivered: bolusAmountDelivered.description, basalAmountDelivered: basalAmountDelivered.description)
-        
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(deliveredInsulin)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsStatusReaderControlPointDelegate?.deliveredInsulin(insulinAmount: jsonString!)
-        }
-        catch {
-        }
+        let deliveredInsulin = DeliveredInsulin(bolusAmountDelivered: bolusAmountDelivered, basalAmountDelivered: basalAmountDelivered)
+        idsStatusReaderControlPointDelegate?.deliveredInsulin(insulinAmount: deliveredInsulin)
     }
     
     func parseInsulinOnBoardResponse(data: NSData) {
         print("parseInsulinOnBoardResponse")
         
-        let insulinOnBoardBytes = (data.subdata(with: NSRange(location:3, length: 2)) as NSData!)
-        let insulinOnBoard: Float = (insulinOnBoardBytes?.shortFloatToFloat())!
-    
-        let remainingDurationBytes = (data.subdata(with: NSRange(location:5, length: 2)) as NSData!).swapUInt16Data()
-        let remainingDuration: UInt16 = remainingDurationBytes.decode()
-    
-        let insulin = InsulinOnBoard(insulinOnBoard: insulinOnBoard.description, remainingDuration: remainingDuration.description)
+        let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
+        let insulinOnBoard: Float = (data.subdata(with: NSRange(location:3, length: 2)) as NSData).shortFloatToFloat()
+        let remainingDuration: UInt16 = (data.subdata(with: NSRange(location:5, length: 2)) as NSData).decode()
         
-        let jsonEncoder = JSONEncoder()
-        do {
-            let jsonData = try jsonEncoder.encode(insulin)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            print("JSON String : " + jsonString!)
-            idsStatusReaderControlPointDelegate?.insulinOnBoard(insulinAmount: jsonString!)
-        }
-        catch {
-        }
+        let insulin = InsulinOnBoard(flags: flags, insulinOnBoard: insulinOnBoard, remainingDuration: remainingDuration)
+        idsStatusReaderControlPointDelegate?.insulinOnBoard(insulinAmount: insulin)
     }
     
     //pg 108

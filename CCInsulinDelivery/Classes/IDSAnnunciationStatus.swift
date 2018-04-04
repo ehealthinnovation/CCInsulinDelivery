@@ -133,7 +133,7 @@ public class IDSAnnunciationStatus : NSObject {
     public init(data: NSData?) {
         print("IDSAnnunciationStatus#init - \(String(describing: data))")
         
-        let flagsByte = (data?.subdata(with: NSRange(location: 0, length: 1)) as NSData!)
+        let flagsByte = (data?.subdata(with: NSRange(location: 0, length: 1)) as NSData?)
         flagsByte?.getBytes(&flags, length: MemoryLayout<UInt8>.size)
         
         annunciationPresent = flags.bit(annunciationPresentBit).toBool()
@@ -144,13 +144,13 @@ public class IDSAnnunciationStatus : NSObject {
         auxInfo5Present = flags.bit(auxInfo5PresentBit).toBool()
         
         if annunciationPresent! {
-            let annunciationInstanceIDBytes = (data?.subdata(with: NSRange(location: annunciationInstanceIDBit, length: 2)) as NSData!)
+            let annunciationInstanceIDBytes = (data?.subdata(with: NSRange(location: annunciationInstanceIDBit, length: 2)) as NSData?)
             annunciationInstanceIDBytes?.getBytes(&annunciationInstanceID, length: MemoryLayout<UInt16>.size)
             
-            let annunciationTypeBytes = (data?.subdata(with: NSRange(location: annunciationTypeBit, length: 2)) as NSData!)
+            let annunciationTypeBytes = (data?.subdata(with: NSRange(location: annunciationTypeBit, length: 2)) as NSData?)
             annunciationTypeBytes?.getBytes(&annunciationType, length: MemoryLayout<UInt16>.size)
             
-            let annunciationStatusByte = (data?.subdata(with: NSRange(location: annunciationStatusBit, length: 1)) as NSData!)
+            let annunciationStatusByte = (data?.subdata(with: NSRange(location: annunciationStatusBit, length: 1)) as NSData?)
             annunciationStatusByte?.getBytes(&annunciationStatus, length: MemoryLayout<UInt8>.size)
         }
     }

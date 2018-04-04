@@ -14,22 +14,38 @@ import CCToolbox
 var thisIDS : IDS?
 
 @objc public protocol IDSProtocol {
-    func IDSConnected(ids: CBPeripheral)
-    func IDSDisconnected(ids: CBPeripheral)
     func IDSFeatures(features: IDSFeatures)
     func IDSStatusChanged(statusChanged: IDSStatusChanged)
     func IDSStatusUpdate(status: IDSStatus)
     func IDSAnnunciationStatusUpdate(annunciation: IDSAnnunciationStatus)
 }
 
+@objc public protocol IDSBatteryProtocol {
+    func IDSBatteryLevel(level: UInt8)
+}
+
+@objc public protocol IDSDeviceInformationProtocol {
+    func IDSSerialNumber(serialNumber : String)
+    func IDSModelNumber(modelNumber: String)
+    func IDSManufacturer(manufacturerName: String)
+}
+
+@objc public protocol IDSConnectionProtocol {
+    func IDSConnected(ids: CBPeripheral)
+    func IDSDisconnected(ids: CBPeripheral)
+}
+
 @objc public protocol IDSDiscoveryProtocol {
     func IDSDiscovered(IDSDevice:CBPeripheral)
 }
 
-
 public class IDS : NSObject {
     public weak var idsDelegate : IDSProtocol?
+    public weak var idsConnectionDelegate: IDSConnectionProtocol?
     public weak var idsDiscoveryDelegate: IDSDiscoveryProtocol?
+    public weak var idsBatteryDelete: IDSBatteryProtocol?
+    public weak var idsDeviceInformationDelete: IDSDeviceInformationProtocol?
+    
     var peripheral : CBPeripheral? {
         didSet {
             if (peripheral != nil) { // don't wipe the UUID when we disconnect and clear the peripheral
@@ -129,8 +145,8 @@ public class IDS : NSObject {
     }
     
     func crcIsValid(data: NSData) -> Bool {
-        let packet = (data.subdata(with: NSRange(location:0, length: data.length - 2)) as NSData!)
-        let packetCRC = (data.subdata(with: NSRange(location:data.length - 2, length: 2)) as NSData!)
+        let packet = (data.subdata(with: NSRange(location:0, length: data.length - 2)) as NSData?)
+        let packetCRC = (data.subdata(with: NSRange(location:data.length - 2, length: 2)) as NSData?)
         let calculatedCRC: NSData = (packet?.crcMCRF4XX)!
         
         if packetCRC == calculatedCRC {
@@ -143,8 +159,8 @@ public class IDS : NSObject {
     }
     
     func featureCRCIsValid(data: NSData) -> Bool {
-        let packet = (data.subdata(with: NSRange(location:2, length: data.length - 2)) as NSData!)
-        let packetCRC = (data.subdata(with: NSRange(location:0, length: 2)) as NSData!)
+        let packet = (data.subdata(with: NSRange(location:2, length: data.length - 2)) as NSData?)
+        let packetCRC = (data.subdata(with: NSRange(location:0, length: 2)) as NSData?)
         let calculatedCRC: NSData = (packet?.crcMCRF4XX)!
         
         if packetCRC == calculatedCRC {
@@ -154,6 +170,18 @@ public class IDS : NSObject {
         print("Calculated CRC: \(String(describing: calculatedCRC)) , Packet CRC: \(String(describing: packetCRC))")
         
         return false
+    }
+    
+    public func readStatus() {
+        if let peripheral = self.peripheral {
+            Bluetooth.sharedInstance().readCharacteristic(peripheral.findCharacteristicByUUID(idsStatusCharacteristic)!)
+        }
+    }
+    
+    public func readBatteryLevel() {
+        if let peripheral = self.peripheral {
+            Bluetooth.sharedInstance().readCharacteristic(peripheral.findCharacteristicByUUID(batteryLevelCharacteristic)!)
+        }
     }
 }
 
@@ -202,8 +230,7 @@ extension IDS: BluetoothPeripheralProtocol {
     public func didConnectPeripheral(_ cbPeripheral:CBPeripheral) {
         print("IDS#didConnectPeripheral")
         self.peripheral = cbPeripheral
-        idsDelegate?.IDSConnected(ids: cbPeripheral)
-        
+        idsConnectionDelegate?.IDSConnected(ids: cbPeripheral)
         IDSStatusReaderControlPoint.sharedInstance().peripheral = cbPeripheral
         IDSCommandControlPoint.sharedInstance().peripheral = cbPeripheral
         IDSRecordAccessControlPoint.sharedInstance().peripheral = cbPeripheral
@@ -217,7 +244,7 @@ extension IDS: BluetoothPeripheralProtocol {
         IDSStatusReaderControlPoint.sharedInstance().peripheral = nil
         IDSCommandControlPoint.sharedInstance().peripheral = nil
         IDSDateTime.sharedInstance().peripheral = nil
-        idsDelegate?.IDSDisconnected(ids: cbPeripheral)
+        idsConnectionDelegate?.IDSDisconnected(ids: cbPeripheral)
     }
 }
 
@@ -292,6 +319,28 @@ extension IDS: BluetoothCharacteristicProtocol {
             if(crcIsValid(data: characteristic.value! as NSData)) {
                 self.parseIDSCommandControlPointCharacteristic(data: characteristic.value! as NSData)
             }
+        }
+        if(characteristic.uuid.uuidString == batteryLevelCharacteristic) {
+            idsBatteryDelete?.IDSBatteryLevel(level: characteristic.value![0])
+        }
+        if(characteristic.uuid.uuidString == manufacturerNameCharacteristic) {
+            self.manufacturerName = String(data: characteristic.value!, encoding: .utf8)
+            print("manufacturerName: \(String(describing: self.manufacturerName))")
+            idsDeviceInformationDelete?.IDSManufacturer(manufacturerName: self.manufacturerName!)
+        }
+        if(characteristic.uuid.uuidString == firmwareRevisionStringCharacteristic) {
+            self.firmwareVersion = String(data: characteristic.value!, encoding: .utf8)
+            print("firmwareVersion: \(String(describing: self.firmwareVersion))")
+        }
+        if(characteristic.uuid.uuidString == modelNumberCharacteristic) {
+            self.modelNumber = String(data: characteristic.value!, encoding: .utf8)
+            print("modelNumber: \(String(describing: self.modelNumber))")
+            idsDeviceInformationDelete?.IDSModelNumber(modelNumber: self.modelNumber!)
+        }
+        if(characteristic.uuid.uuidString == serialNumberCharacteristic) {
+            self.serialNumber = String(data: characteristic.value!, encoding: .utf8)
+            print("serialNumber: \(String(describing: self.serialNumber))")
+            idsDeviceInformationDelete?.IDSSerialNumber(serialNumber: self.serialNumber!)
         }
     }
     

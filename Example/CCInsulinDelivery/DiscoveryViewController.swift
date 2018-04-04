@@ -6,18 +6,23 @@
 //  Copyright (c) 2017 ktallevi. All rights reserved.
 //
 
+import Foundation
 import UIKit
 import CCBluetooth
 import CoreBluetooth
 import CCInsulinDelivery
 
-class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol {
+class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol, Refreshable {
     let cellIdentifier = "IDSDevicesCellIdentifier"
     var discoveredIDSDevices: Array<CBPeripheral> = Array<CBPeripheral>()
     var previouslyConnectedIDSDevices: Array<CBPeripheral> = Array<CBPeripheral>()
     var peripheral : CBPeripheral!
     let rc = UIRefreshControl()
-
+    let browser = NetServiceBrowser()
+    var fhirService = NetService()
+    var fhirServiceIP: String?
+    @IBOutlet weak var discoverFHIRServersButton: UIBarButtonItem!
+   
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -35,10 +40,6 @@ class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol {
         discoveredIDSDevices.removeAll()
         
         self.refreshTable()
-        
-        //IDS.sharedInstance().scanForIDSDevices()
-        //Glucose.sharedInstance().glucoseMeterDiscoveryDelegate = self
-        //Glucose.sharedInstance().scanForGlucoseMeters()
     }
 
     func refreshTable() {
@@ -52,6 +53,13 @@ class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol {
         // Dispose of any resources that can be recreated.
     }
 
+    
+    @IBAction func discoverFHIRServersButtonAction(_ sender: Any) {
+        print("discoverFHIRServersButtonAction")
+        self.browser.delegate = self
+        self.browser.searchForServices(ofType: "_http._tcp.", inDomain: "local")
+    }
+    
     func IDSDiscovered(IDSDevice:CBPeripheral) {
         print("DiscoveryViewController#IDSDiscovered")
         discoveredIDSDevices.append(IDSDevice)
@@ -106,31 +114,31 @@ class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol {
         tableView.deselectRow(at: indexPath, animated: true)
         
         if (indexPath.section == 0) {
-            let glucoseMeter = Array(discoveredIDSDevices)[indexPath.row]
-            self.peripheral = glucoseMeter
-            self.addPreviouslySelectedGlucoseMeter(self.peripheral)
-            self.didSelectDiscoveredGlucoseMeter(Array(self.discoveredIDSDevices)[indexPath.row])
+            let ids = Array(discoveredIDSDevices)[indexPath.row]
+            self.peripheral = ids
+            self.addPreviouslySelectedIDS(self.peripheral)
+            self.didSelectDiscoveredIDS(Array(self.discoveredIDSDevices)[indexPath.row])
         } else {
-            let glucoseMeter = Array(previouslyConnectedIDSDevices)[indexPath.row]
-            self.peripheral = glucoseMeter
-            self.didSelectPreviouslySelectedGlucoseMeter(Array(self.previouslyConnectedIDSDevices)[indexPath.row])
+            let ids = Array(previouslyConnectedIDSDevices)[indexPath.row]
+            self.peripheral = ids
+            self.didSelectPreviouslySelectedIDS(Array(self.previouslyConnectedIDSDevices)[indexPath.row])
         }
         
         tableView.deselectRow(at: indexPath, animated: true)
         performSegue(withIdentifier: "segueToIDSView", sender: self)
     }
     
-    func didSelectDiscoveredGlucoseMeter(_ peripheral:CBPeripheral) {
-        print("ViewController#didSelectDiscoveredPeripheral \(String(describing: peripheral.name))")
+    func didSelectDiscoveredIDS(_ peripheral:CBPeripheral) {
+        print("DiscoveryViewController#didSelectDiscoveredIDS \(String(describing: peripheral.name))")
         Bluetooth.sharedInstance().connectPeripheral(peripheral)
     }
     
-    func didSelectPreviouslySelectedGlucoseMeter(_ peripheral:CBPeripheral) {
-        print("ViewController#didSelectPreviouslyConnectedPeripheral \(String(describing: peripheral.name))")
+    func didSelectPreviouslySelectedIDS(_ peripheral:CBPeripheral) {
+        print("DiscoveryViewController#didSelectPreviouslySelectedIDS \(String(describing: peripheral.name))")
         Bluetooth.sharedInstance().reconnectPeripheral(peripheral.identifier.uuidString)
     }
     
-    func addPreviouslySelectedGlucoseMeter(_ cbPeripheral:CBPeripheral) {
+    func addPreviouslySelectedIDS(_ cbPeripheral:CBPeripheral) {
         var peripheralAlreadyExists: Bool = false
         
         for aPeripheral in self.previouslyConnectedIDSDevices {
@@ -143,6 +151,64 @@ class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol {
             self.previouslyConnectedIDSDevices.append(cbPeripheral)
         }
     }
-
+    
+    func getIPV4StringfromAddress(address: [Data]) -> String {
+        
+        let data = address.first! as NSData
+        
+        var values: [Int] = [0, 0, 0, 0]
+        
+        for i in 0...3 {
+            data.getBytes(&values[i], range: NSRange(location: i+4, length: 1))
+        }
+        
+        let ipStr = String(format: "%d.%d.%d.%d", values[0], values[1], values[2], values[3])
+        
+        return ipStr
+    }
+    
+    func showFHIRServerAlertController() {
+        let alert = UIAlertController(title: "Select FHIR server", message: "", preferredStyle: .actionSheet)
+        
+        alert.addAction(UIAlertAction(title: "fhirtest.uhn.ca", style: .default) { action in
+            action.isEnabled = true
+            FHIR.fhirInstance.setFHIRServerAddress(address: "fhirtest.uhn.ca")
+        })
+        alert.addAction(UIAlertAction(title: self.fhirService.name, style: .default) { action in
+            action.isEnabled = true
+            FHIR.fhirInstance.setFHIRServerAddress(address: self.fhirServiceIP!)
+        })
+        
+        self.present(alert, animated: true)
+    }
 }
+
+extension DiscoveryViewController: NetServiceBrowserDelegate {
+    func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) {
+        if service.name.contains("fhir") {
+            print("found fhir server")
+            self.browser.stop()
+            fhirService = service
+            fhirService.delegate = self
+            fhirService.resolve(withTimeout: 5.0)
+        }
+    }
+}
+
+extension DiscoveryViewController: NetServiceDelegate {
+    func netServiceDidResolveAddress(_ sender: NetService) {
+        fhirServiceIP = self.getIPV4StringfromAddress(address:sender.addresses!) + ":" + String(sender.port)
+        
+        self.showFHIRServerAlertController()
+    }
+    
+    func netService(_ sender: NetService, didNotResolve errorDict: [String : NSNumber]) {
+        print("didNotResolve")
+    }
+    
+    func netServiceWillResolve(_ sender: NetService) {
+        print("netServiceWillResolve")
+    }
+}
+
 

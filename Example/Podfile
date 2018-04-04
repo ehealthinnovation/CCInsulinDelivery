@@ -4,6 +4,8 @@ target 'CCInsulinDelivery_Example' do
   pod 'CCInsulinDelivery', :path => '../'
   pod 'CCBluetooth', :git => 'https://github.com/uhnmdi/CCBluetooth.git'
   pod 'CCToolbox', :git => 'https://github.com/uhnmdi/CCToolbox.git'
+  pod 'SMART', :git => 'https://github.com/uhnmdi/Swift-SMART.git', :submodules => true
+  pod "MBCircularProgressBar"
 
   target 'CCInsulinDelivery_Tests' do
     inherit! :search_paths
