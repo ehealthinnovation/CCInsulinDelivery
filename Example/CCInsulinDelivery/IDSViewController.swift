@@ -42,9 +42,9 @@ class IDSViewController: UITableViewController {
         public func description() -> String {
             switch self {
             case .fhirPatient:
-                return "FHIR Patient"
+                return "Patient"
             case .fhirDevice:
-                return "FHIR Device"
+                return "Device"
             case .idsFeatures:
                 return "IDS Features"
             case .idsStatusChanged:
@@ -225,7 +225,7 @@ class IDSViewController: UITableViewController {
     override func viewDidAppear(_ animated: Bool) {
         self.tableView.estimatedRowHeight = 70
         self.tableView.rowHeight = UITableViewAutomaticDimension
-        //self.refreshTable()
+        self.refreshTable()
     }
 
     func refreshTable() {
@@ -346,15 +346,7 @@ class IDSViewController: UITableViewController {
                 self.refreshTable()
                 
                 if bundle?.entry != nil {
-                    IDSFhir.IDSFhirInstance.searchForSpecimen { (bundle, error) -> Void in
-                        if let error = error {
-                            print("error searching for specimen: \(error)")
-                        }
-                        
-                        if bundle?.entry != nil {
-                            print("specimen found")
-                        }
-                    }
+                    
                 }
             }
         }
@@ -429,9 +421,9 @@ class IDSViewController: UITableViewController {
             if IDSFhir.IDSFhirInstance.patient != nil {
                 cell.detailTextLabel!.text = String(describing: "Patient FHIR ID: \(String(describing: IDSFhir.IDSFhirInstance.patient!.id!))")
                 cell.accessoryView = nil
-                cell.accessoryType = .disclosureIndicator
+                //cell.accessoryType = .disclosureIndicator
             } else {
-                cell.detailTextLabel!.text = "Patient: Tap to upload"
+                cell.detailTextLabel!.text = "Patient: Tap to upload to FHIR server"
             }
         case .fhirDevice:
             if let manufacturer = IDS.sharedInstance().manufacturerName {
@@ -446,9 +438,9 @@ class IDSViewController: UITableViewController {
             if IDSFhir.IDSFhirInstance.device != nil {
                 cell.detailTextLabel!.text = String(describing: "Device FHIR ID: \(String(describing: IDSFhir.IDSFhirInstance.device!.id!))")
                 cell.accessoryView = nil
-                cell.accessoryType = .disclosureIndicator
+                //cell.accessoryType = .disclosureIndicator
             } else {
-                cell.detailTextLabel!.text = "Device: Tap to upload"
+                cell.detailTextLabel!.text = "Device: Tap to upload to FHIR server"
             }
         case .idsFeatures:
             if(idsFeatures != nil) {
@@ -510,7 +502,7 @@ class IDSViewController: UITableViewController {
                     cell.detailTextLabel!.text = "Insulin Concentration"
                 default:
                     cell.accessoryView = nil
-                    cell.accessoryType = .none
+                    //cell.accessoryType = .none
                 }
             }
         case .idsStatusChanged:
@@ -543,7 +535,7 @@ class IDSViewController: UITableViewController {
                     cell.detailTextLabel!.text = "History Event Recorded"
                 default:
                     cell.accessoryView = nil
-                    cell.accessoryType = .none
+                    //cell.accessoryType = .none
                 }
             }
         case .idsStatus:
@@ -566,7 +558,7 @@ class IDSViewController: UITableViewController {
                     cell.textLabel!.text = ""
                     cell.detailTextLabel!.text = ""
                     cell.accessoryView = nil
-                    cell.accessoryType = .none
+                    //cell.accessoryType = .none
                 }
             }
         case .idsAnnunciation:
@@ -585,7 +577,7 @@ class IDSViewController: UITableViewController {
                         cell.detailTextLabel!.text = "Annunciation Status"
                     default:
                         cell.accessoryView = nil
-                        cell.accessoryType = .none
+                        //cell.accessoryType = .none
                     }
                 }
             }
@@ -618,7 +610,7 @@ class IDSViewController: UITableViewController {
                 cell.detailTextLabel!.text = "Get Insulin On Board"
             default:
                 cell.accessoryView = nil
-                cell.accessoryType = .none
+                //cell.accessoryType = .none
             }
         case .idsCommandControlPoint:
             guard let row = Section.IDSCommandControlPoint(rawValue:indexPath.row) else { fatalError("invalid row") }
@@ -718,7 +710,7 @@ class IDSViewController: UITableViewController {
                 cell.detailTextLabel!.text = "Set Max Bolus Amount"
             default:
                 cell.accessoryView = nil
-                cell.accessoryType = .none
+                //cell.accessoryType = .none
             }
         case .recordAccessControlPoint:
             guard let row = Section.RecordAccessControlPoint(rawValue:indexPath.row) else { fatalError("invalid row") }
@@ -764,7 +756,7 @@ class IDSViewController: UITableViewController {
                 cell.detailTextLabel!.text = "Delete Last Record"
             default:
                 cell.accessoryView = nil
-                cell.accessoryType = .none
+                //cell.accessoryType = .none
             }
         case .currentDateTime:
             cell.textLabel!.text = ""
@@ -781,7 +773,7 @@ class IDSViewController: UITableViewController {
             cell.detailTextLabel!.text = "Start session"
         default:
             cell.accessoryView = nil
-            cell.accessoryType = .none
+            //cell.accessoryType = .none
         }
         
         return cell
@@ -1180,8 +1172,12 @@ class IDSViewController: UITableViewController {
         switch section {
         case .fhirPatient:
             if (IDSFhir.IDSFhirInstance.patient?.id) != nil {
-                performSegue(withIdentifier: "segueToPatient", sender: self)
+                //performSegue(withIdentifier: "segueToPatient", sender: self)
             } else {
+                if FHIR.fhirInstance.fhirServerAddress == "" {
+                    showAlert(title: "Error", message: "FHIR server not selected")
+                    return
+                }
                 cell.accessoryView = self.createActivityView()
                 IDSFhir.IDSFhirInstance.createPatient { (patient, error) -> Void in
                     if error == nil {
@@ -1192,8 +1188,13 @@ class IDSViewController: UITableViewController {
             }
         case .fhirDevice:
             if (IDSFhir.IDSFhirInstance.device?.id) != nil {
-                performSegue(withIdentifier: "segueToDevice", sender: self)
+                //performSegue(withIdentifier: "segueToDevice", sender: self)
             } else {
+                if FHIR.fhirInstance.fhirServerAddress == "" {
+                    showAlert(title: "Error", message: "FHIR server not selected")
+                    return
+                }
+                
                 cell.accessoryView = self.createActivityView()
                 IDSFhir.IDSFhirInstance.createDevice { (device, error) -> Void in
                     if error == nil {
@@ -1201,7 +1202,6 @@ class IDSViewController: UITableViewController {
                         IDSFhir.IDSFhirInstance.createDeviceComponent { (error) -> Void in
                             if error == nil {
                                 print("device component created with id: \(String(describing: IDSFhir.IDSFhirInstance.deviceComponent!.id!))")
-                                IDSFhir.IDSFhirInstance.createSpecimen()
                             }
                             
                         }
@@ -1279,9 +1279,9 @@ class IDSViewController: UITableViewController {
                     }
                 }
             case .setBolus:
-                IDSCommandControlPoint.sharedInstance().setBolus(fastAmount: 7.5,
-                                                                 extendedAmount: 0,
-                                                                 duration: 0,
+                IDSCommandControlPoint.sharedInstance().setBolus(fastAmount: 0,
+                                                                 extendedAmount: 5.0,
+                                                                 duration: 7,
                                                                  delayTime: 0,
                                                                  templateNumber: 0,
                                                                  activationType: 0,

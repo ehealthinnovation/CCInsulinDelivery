@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class DeliveredInsulin: Codable {
+public class DeliveredInsulin: NSObject {
     public var bolusAmountDelivered: Float!
     public var basalAmountDelivered: Float!
     

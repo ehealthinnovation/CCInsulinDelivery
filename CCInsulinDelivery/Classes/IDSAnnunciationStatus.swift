@@ -56,72 +56,72 @@ public class IDSAnnunciationStatus : NSObject {
     }
     
     @objc public enum AnnunciationTypeValues: UInt16 {
-        case system_issue = 0x000F,
-        mechanical_issue = 0x0033,
-        occlusion_detected = 0x003C,
-        reservoir_issue	= 0x0055,
-        reservoir_empty	= 0x005A,
-        reservoir_low = 0x0066,
-        priming_issue = 0x0069,
-        infusion_set_incomplete = 0x0096,
-        infusion_set_detached = 0x0099,
-        power_source_insufficient = 0x00A5,
-        battery_empty = 0x00AA,
-        battery_low = 0x00C3,
-        battery_medium = 0x00CC,
-        battery_full = 0x00F0,
-        temperature_out_of_range = 0x00FF,
-        air_pressure_out_of_range = 0x0303,
-        bolus_cancelled = 0x030C,
-        tbr_over = 0x0330,
-        tbr_cancelled = 0x033F,
-        max_delivery = 0x0356,
-        date_time_issue = 0x0359,
+        case systemIssue = 0x000F,
+        mechanicalIssue = 0x0033,
+        occlusionDetected = 0x003C,
+        reservoirIssue	= 0x0055,
+        reservoirEmpty	= 0x005A,
+        reservoirLow = 0x0066,
+        primingIssue = 0x0069,
+        infusionSetIncomplete = 0x0096,
+        infusionSetDetached = 0x0099,
+        powerSourceInsufficient = 0x00A5,
+        batteryEmpty = 0x00AA,
+        batteryLow = 0x00C3,
+        batteryMedium = 0x00CC,
+        batteryFull = 0x00F0,
+        temperatureOutOfRange = 0x00FF,
+        airPressureOutOfRange = 0x0303,
+        bolusCancelled = 0x030C,
+        tbrOver = 0x0330,
+        tbrCancelled = 0x033F,
+        maxDelivery = 0x0356,
+        dateTimeIssue = 0x0359,
         temperature = 0x0365
         
         public var description: String {
             switch self {
-            case .system_issue:
+            case .systemIssue:
                 return NSLocalizedString("System issue", comment:"")
-            case .mechanical_issue:
+            case .mechanicalIssue:
                 return NSLocalizedString("Mechanical issue", comment:"")
-            case .occlusion_detected:
+            case .occlusionDetected:
                 return NSLocalizedString("Occlusion detected", comment:"")
-            case .reservoir_issue:
+            case .reservoirIssue:
                 return NSLocalizedString("Reservoir issue", comment:"")
-            case .reservoir_empty:
+            case .reservoirEmpty:
                 return NSLocalizedString("Reservoir empty", comment:"")
-            case .reservoir_low:
+            case .reservoirLow:
                 return NSLocalizedString("Reservoir low", comment:"")
-            case .priming_issue:
+            case .primingIssue:
                 return NSLocalizedString("Priming issue", comment:"")
-            case .infusion_set_incomplete:
+            case .infusionSetIncomplete:
                 return NSLocalizedString("Infusion set incomplete", comment:"")
-            case .infusion_set_detached:
+            case .infusionSetDetached:
                 return NSLocalizedString("Infusion set detached", comment:"")
-            case .power_source_insufficient:
+            case .powerSourceInsufficient:
                 return NSLocalizedString("Power source insufficient", comment:"")
-            case .battery_empty:
+            case .batteryEmpty:
                 return NSLocalizedString("Battery empty", comment:"")
-            case .battery_low:
+            case .batteryLow:
                 return NSLocalizedString("Battery low", comment:"")
-            case .battery_medium:
+            case .batteryMedium:
                 return NSLocalizedString("Battery medium", comment:"")
-            case .battery_full:
+            case .batteryFull:
                 return NSLocalizedString("Battery full", comment:"")
-            case .temperature_out_of_range:
+            case .temperatureOutOfRange:
                 return NSLocalizedString("Temperature out of range", comment:"")
-            case .air_pressure_out_of_range:
+            case .airPressureOutOfRange:
                 return NSLocalizedString("Air pressure out of range", comment:"")
-            case .bolus_cancelled:
+            case .bolusCancelled:
                 return NSLocalizedString("Bolus cancelled", comment:"")
-            case .tbr_over:
+            case .tbrOver:
                 return NSLocalizedString("TBR over", comment:"")
-            case .tbr_cancelled:
+            case .tbrCancelled:
                 return NSLocalizedString("TBR cancelled", comment:"")
-            case .max_delivery:
+            case .maxDelivery:
                 return NSLocalizedString("Max delivery", comment:"")
-            case .date_time_issue:
+            case .dateTimeIssue:
                 return NSLocalizedString("Date time issue", comment:"")
             case .temperature:
                 return NSLocalizedString("Temperature", comment:"")

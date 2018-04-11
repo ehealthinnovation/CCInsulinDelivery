@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class InsulinOnBoard: Codable {
+public class InsulinOnBoard: NSObject {
     public var flags: UInt8
     public var insulinOnBoard: Float
     public var remainingDuration: UInt16?

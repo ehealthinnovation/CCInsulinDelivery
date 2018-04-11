@@ -20,7 +20,6 @@ public class IDSFhir {
     var patient: Patient?
     var device: Device?
     var deviceComponent: DeviceComponent?
-    var specimen: Specimen?
     
     var givenName: FHIRString = "Lisa"
     var familyName: FHIRString = "Simpson"
@@ -126,13 +125,13 @@ public class IDSFhir {
         let serialNumber = IDS.sharedInstance().serialNumber!.replacingOccurrences(of: "\0", with: "")
         
         let deviceCoding = Coding()
-        deviceCoding.code = "337414009"
-        deviceCoding.system = FHIRURL.init("http://snomed.info/sct")
-        deviceCoding.display = "Blood glucose meters (physical object)"
+        deviceCoding.code = "4432"
+        deviceCoding.system = FHIRURL.init("urn:iso:std:iso:11073:10101")
+        deviceCoding.display = "MDC_DEV_PUMP"
         
         let deviceType = CodeableConcept()
         deviceType.coding = [deviceCoding]
-        deviceType.text = "Glucose Meter"
+        deviceType.text = "Infusion Pump"
         
         let deviceIdentifierTypeCoding = Coding()
         deviceIdentifierTypeCoding.system = FHIRURL.init("http://hl7.org/fhir/identifier-type")
@@ -250,9 +249,9 @@ public class IDSFhir {
         // type
         var deviceCodingArray = [Coding]()
         let deviceCoding = Coding()
-        deviceCoding.code = FHIRString.init("160368")
-        deviceCoding.display = FHIRString.init("MDC_CONC_GLU_UNDETERMINED_PLASMA")
-        deviceCoding.system = FHIRURL.init("urn.iso.std.iso:11073:10101")!
+        deviceCoding.code = FHIRString.init("69805005")
+        deviceCoding.display = FHIRString.init("Insulin pump, device (physical object)")
+        deviceCoding.system = FHIRURL.init("http://snomed.info/sct")!
         deviceCodingArray.append(deviceCoding)
         
         let deviceType = CodeableConcept()
@@ -638,7 +637,7 @@ public class IDSFhir {
         }
     }
     
-    public func createMedicationAdministration(administeredAmount: Float, onDate: Date, prescription: MedicationRequest?, callback: @escaping (_ medicationAdministration: MedicationAdministration, _ error: Error?) -> Void) {
+    public func createMedicationAdministration(administeredAmount: Float, onDate: Date, prescriptionID: Int?, callback: @escaping (_ medicationAdministration: MedicationAdministration, _ error: Error?) -> Void) {
         let medicationAdministration = MedicationAdministration()
         
         let medicationCodeableConcept = CodeableConcept()
@@ -658,9 +657,9 @@ public class IDSFhir {
         effectivePeriod.end = DateTime(string: (onDate.iso8601))
         medicationAdministration.effectivePeriod = effectivePeriod
         
-        if let prescription = prescription {
+        if let prescriptionID = prescriptionID {
             let prescriptionReference = Reference()
-            prescriptionReference.reference = FHIRString.init("MedicationRequest/\(String(describing: prescription.id!))")
+            prescriptionReference.reference = FHIRString.init("MedicationRequest/\(String(describing: prescriptionID))")
             medicationAdministration.prescription = prescriptionReference
         }
         
@@ -698,76 +697,6 @@ public class IDSFhir {
                 print(medicationAdministration)
             }
             callback(medicationAdministration, error)
-        }
-    }
-    
-    public func createSpecimen() {
-        let specimen = Specimen()
-        let specimenCollection = SpecimenCollection()
-        
-        let bodySiteCoding = Coding()
-        bodySiteCoding.system = FHIRURL.init("https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.glucose_measurement.xml")
-        bodySiteCoding.code = FHIRString.init(String(describing:"1"))
-        bodySiteCoding.display = FHIRString.init(String(describing:"Finger"))
-        
-        let bodySite = CodeableConcept()
-        bodySite.coding = [bodySiteCoding]
-        specimenCollection.bodySite = bodySite
-        specimen.collection = specimenCollection
-        
-        let deviceReference = Reference()
-        deviceReference.reference = FHIRString.init("Device/\(String(describing: self.device!.id!))")
-        specimen.subject = deviceReference
-        
-        let typeCoding = Coding()
-        typeCoding.system = FHIRURL.init("https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.glucose_measurement.xml")
-        typeCoding.code = FHIRString.init(String(describing:"1"))
-        typeCoding.display = FHIRString.init(String(describing:"Capillary Whole blood"))
-        
-        let type = CodeableConcept()
-        type.coding = [typeCoding]
-        
-        specimen.type = type
-        
-        FHIR.fhirInstance.createSpecimen(specimen: specimen) { (specimen, error) -> Void in
-            guard error == nil else {
-                print("error creating specimen: \(String(describing: error))")
-                return
-            }
-            
-            print("specimen uploaded with id: \(specimen.id!)")
-            self.specimen = specimen
-        }
-    }
-    
-    public func searchForSpecimen(callback: @escaping FHIRSearchBundleErrorCallback) {
-        print("IDSFhir: searchForSpecimen")
-        let bodySite: String = String(describing: "1")
-        let type = String(describing: "1")
-        
-        let searchDict: [String:Any] = [
-            "bodysite": bodySite,
-            "type": type,
-            "subject": String(describing: "Device/\(self.device!.id!)")
-        ]
-        
-        FHIR.fhirInstance.searchForSpecimen(searchParameters: searchDict) { (bundle, error) -> Void in
-            if let error = error {
-                print("error searching for specimen: \(error)")
-            }
-            
-            if bundle?.entry == nil {
-               print("specimen not found")
-            } else {
-                if bundle?.entry != nil {
-                    let specimens = bundle?.entry?
-                        .filter { return $0.resource is Specimen }
-                        .map { return $0.resource as! Specimen }
-                    
-                    self.specimen = specimens?[0]
-                }
-            }
-            callback(bundle, error)
         }
     }
 }

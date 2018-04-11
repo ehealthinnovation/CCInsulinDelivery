@@ -6,12 +6,14 @@ PODS:
     - CCToolbox
   - CCToolbox (0.8.5)
   - SMART (3.0.1.1)
+  - UICircularProgressRing (1.8.4)
 
 DEPENDENCIES:
   - CCBluetooth (from `https://github.com/uhnmdi/CCBluetooth.git`)
   - CCInsulinDelivery (from `../`)
   - CCToolbox (from `https://github.com/uhnmdi/CCToolbox.git`)
   - SMART (from `https://github.com/uhnmdi/Swift-SMART.git`)
+  - UICircularProgressRing
 
 EXTERNAL SOURCES:
   CCBluetooth:
@@ -41,7 +43,8 @@ SPEC CHECKSUMS:
   CCInsulinDelivery: 77f6aba089e49bcbc5d22ae7f202cf627024df40
   CCToolbox: 5d23c13ba8da680a5b2a2258117e74b9c2b90cdb
   SMART: f8601c49395718fa6dc06ec9e411242817bf7aaa
+  UICircularProgressRing: 653b31f7252b2959e8234f5b9ea5f925da755954
 
-PODFILE CHECKSUM: a0c96b8ed19b9bc03e27222b077e706f200f3fc5
+PODFILE CHECKSUM: 9e2d43e567c4f1e26aef28c1b33c898e41754d19
 
 COCOAPODS: 1.3.1

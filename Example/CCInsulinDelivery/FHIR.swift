@@ -16,7 +16,7 @@ import SMART
 class FHIR: NSObject {
     var smart: Client?
     public var server: FHIRServer?
-    public var fhirServerAddress: String = "fhirtest.uhn.ca"
+    public var fhirServerAddress: String = "" //"fhirtest.uhn.ca"
     static let fhirInstance: FHIR = FHIR()
     
     public override init() {
@@ -145,29 +145,6 @@ class FHIR: NSObject {
             }
             
             callback(observation, error)
-        }
-    }
-    
-    public func createSpecimen(specimen: Specimen, callback: @escaping (_ specimen: Specimen, _ error: Error?) -> Void) {
-        specimen.createAndReturn(server!) { error in
-            if let error = error {
-                print(error)
-            }
-            
-            callback(specimen, error)
-        }
-    }
-    
-    public func searchForSpecimen(searchParameters: Dictionary<String, Any>, callback: @escaping FHIRSearchBundleErrorCallback) {
-        print("fhir: searchForSpecimen")
-        let searchSpecimen = Specimen.search(searchParameters)
-        
-        searchSpecimen.perform((smart?.server)!) { bundle, error in
-            if let error = error {
-                print(error)
-            }
-            
-            callback(bundle, error)
         }
     }
     

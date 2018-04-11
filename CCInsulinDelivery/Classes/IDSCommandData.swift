@@ -1,6 +1,6 @@
 //
 //  IDSCommandData.swift
-//  CCBluetooth
+//  CCInsulinDelivery
 //
 //  Created by Kevin Tallevi on 11/2/17.
 //
