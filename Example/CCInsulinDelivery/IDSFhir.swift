@@ -268,307 +268,6 @@ public class IDSFhir {
         }
     }
     
-    /*func searchForObservations(measurements: [GlucoseMeasurement]) {
-        for measurement in measurements {
-            self.searchForObservation(measurement: measurement) { (bundle, error) -> Void in
-                if let error = error {
-                    print("error searching for observation: \(error)")
-                }
-                
-                if bundle?.entry == nil {
-                    print("measurement \(measurement.sequenceNumber) not found")
-                    measurement.existsOnFHIR = false
-                } else {
-                    print("measurement \(measurement.sequenceNumber) found")
-                    measurement.existsOnFHIR = true
-                    measurement.fhirID = String(describing: bundle?.entry?.first?.resource?.id)
-                }
-            }
-        }
-    }
-    
-    func searchForObservation(measurement: GlucoseMeasurement, callback: @escaping FHIRSearchBundleErrorCallback) {
-        let truncatedMeasurement = String(describing: measurement.toMMOL()!.truncate(numberOfDigits: 2))
-        
-        let searchDict: [String: Any] = [
-            "subject": String(describing: BGMFhir.BGMFhirInstance.patient!.id!),
-            "date": measurement.dateTime?.iso8601 as Any,
-            "code": "http://loinc.org|15074-8",
-            "value-quantity": (truncatedMeasurement as String) + "|http://unitsofmeasure.org|mmol/L"
-        ]
-        
-        FHIR.fhirInstance.searchForObservation(searchParameters: searchDict) { bundle, error in
-            if let error = error {
-                print("error searching for observation: \(error)")
-            }
-            
-            if bundle?.entry != nil {
-                print("measurement \(measurement.sequenceNumber) found")
-                measurement.existsOnFHIR = true
-                measurement.fhirID = String(describing: bundle!.entry!.first!.resource!.id!)
-            }
-            
-            callback(bundle, error)
-        }
-    }
-
-    func uploadSingleMeasurement(measurement: GlucoseMeasurement, callback: @escaping (_ observation: Observation, _ error: Error?) -> Void) {
-        if measurement.existsOnFHIR == false {
-            FHIR.fhirInstance.createObservation(observation: self.measurementToObservation(measurement: measurement)) { (observation, error) -> Void in
-                guard error == nil else {
-                    print("error creating observation: \(String(describing: error))")
-                    return
-                }
-                
-                print("observation uploaded with id: \(observation.id!)")
-                measurement.existsOnFHIR = true
-                measurement.fhirID = String(describing: observation.id!)
-        
-                callback(observation, error)
-            }
-        }
-    }
-
-    func uploadObservationBundle(measurements: [GlucoseMeasurement], callback: @escaping FHIRSearchBundleErrorCallback) {
-        var pendingObservations: [Observation] = []
-        var measurementArrayLocation: [Int] = []
-        
-        for i in 0...measurements.count - 1 {
-            if measurements[i].existsOnFHIR == false {
-                print("measurement pending: \(i)")
-                pendingObservations.append(self.measurementToObservation(measurement: measurements[i]))
-                measurementArrayLocation.append(i)
-            }
-        }
-        
-        if pendingObservations.count == 0 {
-            return
-        }
-        
-        FHIR.fhirInstance.createObservationBundle(observations: pendingObservations) { (bundle, error) -> Void in
-            guard error == nil else {
-                print("error creating observations: \(String(describing: error))")
-                return
-            }
-            
-            if let count = bundle?.entry?.count {
-                //iterate through the batch response entries, start from 1 (zero is not a observation response)
-                for i in 1...count-1 {
-                    if bundle?.entry?[i].response?.status == "201 Created" {
-                        let components = bundle?.entry?[i].response?.location?.absoluteString.components(separatedBy: "/")
-                        measurements[measurementArrayLocation[i-1]].existsOnFHIR = true
-                        measurements[measurementArrayLocation[i-1]].fhirID = components![1]
-                        
-                        print("observation uploaded with ID \(components![1])")
-                    }
-                }
-            } else {
-                print("problem uploading bundle, count is zero")
-            }
-            
-            callback(bundle, error)
-        }
-    }
-    
-    func measurementToObservation(measurement: GlucoseMeasurement) -> Observation {
-        var codingArray = [Coding]()
-        let coding = Coding()
-        coding.system = FHIRURL.init("http://loinc.org")
-        coding.code = "15074-8"
-        coding.display = "Glucose [Moles/volume] in Blood"
-        codingArray.append(coding)
-        
-        let codableConcept = CodeableConcept()
-        codableConcept.coding = codingArray as [Coding]
-        
-        let deviceReference = Reference()
-        deviceReference.reference = FHIRString.init("Device/\(String(describing: BGMFhir.BGMFhirInstance.device!.id!))")
-        
-        let subjectReference = Reference()
-        subjectReference.reference = FHIRString.init("Patient/\(String(describing: BGMFhir.BGMFhirInstance.patient!.id!))")
-        
-        var performerArray = [Reference]()
-        let performerReference = Reference()
-        performerReference.reference = FHIRString.init("Patient/\(String(describing: BGMFhir.BGMFhirInstance.patient!.id!))")
-        performerArray.append(performerReference)
-        
-        let measurementNumber = NSDecimalNumber(value: (measurement.toMMOL()?.truncate(numberOfDigits: 2))!)
-        
-        let decimalRoundingBehaviour = NSDecimalNumberHandler(roundingMode:.plain,
-                                                              scale: 2, raiseOnExactness: false,
-                                                              raiseOnOverflow: false, raiseOnUnderflow:
-            false, raiseOnDivideByZero: false)
-        
-        let quantity = Quantity.init()
-        quantity.value = FHIRDecimal.init(String(describing: measurementNumber.rounding(accordingToBehavior: decimalRoundingBehaviour)))
-        quantity.code = "mmol/L"
-        quantity.system = FHIRURL.init("http://unitsofmeasure.org")
-        quantity.unit = "mmol/L"
-        
-        let effectivePeriod = Period()
-        effectivePeriod.start = DateTime(string: (measurement.dateTime?.iso8601)!)
-        effectivePeriod.end = DateTime(string: (measurement.dateTime?.iso8601)!)
-        
-        let observation = Observation.init()
-        observation.status = ObservationStatus(rawValue: "final")
-        observation.code = codableConcept
-        observation.valueQuantity = quantity
-        observation.effectivePeriod = effectivePeriod
-        observation.device = deviceReference
-        observation.subject = subjectReference
-        observation.performer = performerArray
-        
-        if measurement.contextInformationFollows {
-            var observationExtensionArray = [Extension]()
-            let bluetoothGlucoseMeasurementContextURL: String = "https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.glucose_measurement_context.xml"
-            
-            if measurement.context != nil {
-                // Carbohydrate ID
-                if measurement.context?.carbohydrateID?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.carbohydrateID!.rawValue.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.carbohydrateID!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Carbohydrate Weight
-                if measurement.context?.carbohydrateWeight?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.carbohydrateWeight!.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.carbohydrateWeight!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Meal
-                if measurement.context?.meal?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.meal!.rawValue.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.meal!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Tester
-                if measurement.context?.tester?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.tester)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.tester!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Health
-                if measurement.context?.health?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.health)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.health!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Exercise Duration
-                if measurement.context?.exerciseDuration?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.exerciseDuration!.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.exerciseDuration!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Exercise Intensity
-                if measurement.context?.exerciseIntensity?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.exerciseIntensity!.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.exerciseIntensity!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Medication ID
-                if measurement.context?.medicationID?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.medicationID!.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.medicationID!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // Medication
-                if measurement.context?.medication?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.medication!.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.medication!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-                
-                // hbA1c
-                if measurement.context?.hbA1c?.description != nil {
-                    let extensionElementCoding = Coding()
-                    extensionElementCoding.system = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElementCoding.code = FHIRString.init((String(describing:measurement.context!.hbA1c!.description)))
-                    extensionElementCoding.display = FHIRString.init((String(describing:measurement.context!.hbA1c!.description)))
-                    
-                    let extensionElement = Extension()
-                    extensionElement.url = FHIRURL.init(bluetoothGlucoseMeasurementContextURL)
-                    extensionElement.valueCoding = extensionElementCoding
-                    
-                    observationExtensionArray.append(extensionElement)
-                }
-            }
-            observation.extension_fhir = observationExtensionArray
-        }
-        return observation
-    }
-    */
-    
     public func createMedicationRequest(amount: Float, duration: Int, onDate: Date, callback: @escaping (_ medicationRequest: MedicationRequest, _ error: Error?) -> Void) {
         let medicationRequest = MedicationRequest()
 
@@ -637,7 +336,7 @@ public class IDSFhir {
         }
     }
     
-    public func createMedicationAdministration(administeredAmount: Float, onDate: Date, prescriptionID: Int?, callback: @escaping (_ medicationAdministration: MedicationAdministration, _ error: Error?) -> Void) {
+    public func createMedicationAdministration(administeredAmount: Float, duration: Int, onDate: Date, prescriptionID: Int?, callback: @escaping (_ medicationAdministration: MedicationAdministration, _ error: Error?) -> Void) {
         let medicationAdministration = MedicationAdministration()
         
         let medicationCodeableConcept = CodeableConcept()
@@ -652,9 +351,10 @@ public class IDSFhir {
         subjectReference.reference = FHIRString.init("Patient/\(String(describing: self.patient!.id!))")
         medicationAdministration.subject = subjectReference
         
+        let endDate = onDate.addingTimeInterval(Double(duration) * 60.0)
         let effectivePeriod = Period()
         effectivePeriod.start = DateTime(string: (onDate.iso8601))
-        effectivePeriod.end = DateTime(string: (onDate.iso8601))
+        effectivePeriod.end = DateTime(string: (endDate.iso8601))
         medicationAdministration.effectivePeriod = effectivePeriod
         
         if let prescriptionID = prescriptionID {
@@ -674,7 +374,7 @@ public class IDSFhir {
         medicationDosage.route = medicationDosageCodeableConcept
         
         let decimalRoundingBehaviour = NSDecimalNumberHandler(roundingMode:.plain,
-                                                              scale: 2, raiseOnExactness: false,
+                                                              scale: 1, raiseOnExactness: false,
                                                               raiseOnOverflow: false, raiseOnUnderflow:
                                                               false, raiseOnDivideByZero: false)
         

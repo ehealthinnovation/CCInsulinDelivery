@@ -29,10 +29,10 @@ public class IDSStatusChanged : NSObject {
     public var activeBolusStatusChanged: Bool?
     public var historyEventRecorded: Bool?
 
-    public init(data: NSData?) {
+    public init(data: NSData) {
         print("IDSStatusChanged#init - \(String(describing: data))")
         
-        let statusChangedBytes = (data?.subdata(with: NSRange(location:0, length: 2)) as NSData?)
+        let statusChangedBytes = (data.subdata(with: NSRange(location:0, length: 2)) as NSData?)
         var statusChangedBits:Int = 0
         statusChangedBytes?.getBytes(&statusChangedBits, length: MemoryLayout<UInt16>.size)
         

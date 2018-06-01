@@ -281,7 +281,6 @@ public class IDSCommandControlPoint: NSObject {
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            flags, // all flags cleared
-                                           //IDSStatusReaderControlPoint.BolusType.fast.rawValue,
                                            type,
                                            UInt8(bolusFastAmountValue & 0xff),
                                            UInt8(bolusFastAmountValue >> 8),
@@ -528,7 +527,6 @@ public class IDSCommandControlPoint: NSObject {
         }
     }
     
-    //pg 141
     public func readISFProfileTemplate(templateNumber: UInt8) {
         let opCode: UInt16 = IDSOpCodes.OpCodes.readISFProfileTemplate.rawValue
         
@@ -746,7 +744,6 @@ public class IDSCommandControlPoint: NSObject {
         print("parseSnoozeAnnunciationResponse")
         
         let snoozedAnnunciation: UInt16 = (data.subdata(with: NSRange(location:2, length: 2)) as NSData).decode()
-        //let snoozedAnnunciation: UInt16 = (snoozedAnnunciationBytes?.decode())!
         idsCommandControlPointDelegate?.snoozedAnnunciation(annunciation: snoozedAnnunciation)
     }
     
@@ -754,16 +751,12 @@ public class IDSCommandControlPoint: NSObject {
         print("parseConfirmAnnunciationResponse")
         
         let confirmedAnnunciation: UInt16 = (data.subdata(with: NSRange(location:2, length: 2)) as NSData).decode()
-        //let confirmedAnnunciation: UInt16 = (confirmedAnnunciationBytes?.decode())!
         idsCommandControlPointDelegate?.confirmedAnnunciation(annunciation: confirmedAnnunciation)
     }
     
-    //TO-DO: store responses until flags bit 0 = 1
     func parseWriteBasalRateProfileTemplateResponse(data: NSData) {
         print("parseWriteBasalRateProfileTemplateResponse")
         let flags: Int = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
-        //let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
-        //let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData!).decode()
         if flags.bit(0) == 1 {
             idsCommandControlPointDelegate?.writeBasalRateProfileTemplateResponse()
         }
@@ -889,10 +882,7 @@ public class IDSCommandControlPoint: NSObject {
     
     public func parseWriteISFProfileTemplateResponse(data: NSData) {
         print("parseWriteISFProfileTemplateResponse")
-        //let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData!).decode()
         let templateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData).decode()
-        //let firstTimeBlockNumberIndex: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData!).decode()
-        
         idsCommandControlPointDelegate?.writeISFProfileTemplateResponse(templateNumber: templateNumber)
     }
     

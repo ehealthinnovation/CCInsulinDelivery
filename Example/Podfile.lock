@@ -1,12 +1,12 @@
 PODS:
-  - CCBluetooth (0.5.9):
+  - CCBluetooth (0.6.0):
     - CCToolbox
   - CCInsulinDelivery (0.1.0):
     - CCBluetooth
     - CCToolbox
-  - CCToolbox (0.8.5)
+  - CCToolbox (0.8.6)
   - SMART (3.0.1.1)
-  - UICircularProgressRing (1.8.4)
+  - UICircularProgressRing (2.1.0)
 
 DEPENDENCIES:
   - CCBluetooth (from `https://github.com/uhnmdi/CCBluetooth.git`)
@@ -15,11 +15,15 @@ DEPENDENCIES:
   - SMART (from `https://github.com/uhnmdi/Swift-SMART.git`)
   - UICircularProgressRing
 
+SPEC REPOS:
+  https://github.com/CocoaPods/Specs.git:
+    - UICircularProgressRing
+
 EXTERNAL SOURCES:
   CCBluetooth:
     :git: https://github.com/uhnmdi/CCBluetooth.git
   CCInsulinDelivery:
-    :path: ../
+    :path: "../"
   CCToolbox:
     :git: https://github.com/uhnmdi/CCToolbox.git
   SMART:
@@ -28,10 +32,10 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   CCBluetooth:
-    :commit: 4a0b7ad2a62c78db6e5bb3b951874a2f27160cf5
+    :commit: 435ac447584c1d646c5423de408f33a585f5c6a6
     :git: https://github.com/uhnmdi/CCBluetooth.git
   CCToolbox:
-    :commit: 403cff47e08a9f64ecfad64b1045f0b85794f601
+    :commit: e74c698487a9a9b2f358d8c8364b3e73d93b7e57
     :git: https://github.com/uhnmdi/CCToolbox.git
   SMART:
     :commit: 2b8049cb8301321074e0f0355b79247a85b6d9ea
@@ -39,12 +43,12 @@ CHECKOUT OPTIONS:
     :submodules: true
 
 SPEC CHECKSUMS:
-  CCBluetooth: 43a4c57f6bc6c3c26f63a69c62254cd0dc715750
-  CCInsulinDelivery: 77f6aba089e49bcbc5d22ae7f202cf627024df40
-  CCToolbox: 5d23c13ba8da680a5b2a2258117e74b9c2b90cdb
+  CCBluetooth: 73dfd4c8b92bd83000fb322a6fb00fb998b23778
+  CCInsulinDelivery: b1582c711097711fb4ba716ca3e1a43c89a11174
+  CCToolbox: d7ffcace3d86a4dc7b59422d2fd57b6f684fcf59
   SMART: f8601c49395718fa6dc06ec9e411242817bf7aaa
-  UICircularProgressRing: 653b31f7252b2959e8234f5b9ea5f925da755954
+  UICircularProgressRing: 01b8f67bbaca7e3a83ccfa67630fe059a51211d1
 
 PODFILE CHECKSUM: 9e2d43e567c4f1e26aef28c1b33c898e41754d19
 
-COCOAPODS: 1.3.1
+COCOAPODS: 1.5.0

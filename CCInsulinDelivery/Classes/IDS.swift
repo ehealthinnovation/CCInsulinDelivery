@@ -45,6 +45,7 @@ public class IDS : NSObject {
     public weak var idsDiscoveryDelegate: IDSDiscoveryProtocol?
     public weak var idsBatteryDelete: IDSBatteryProtocol?
     public weak var idsDeviceInformationDelete: IDSDeviceInformationProtocol?
+    public var historyEvents: Array<IDSHistoryEvent> = Array<IDSHistoryEvent>()
     
     var peripheral : CBPeripheral? {
         didSet {
@@ -96,7 +97,6 @@ public class IDS : NSObject {
     }
     
     func configureBluetoothParameters() {
-        Bluetooth.sharedInstance().serviceUUIDString = "1829"
         Bluetooth.sharedInstance().allowDuplicates = false
         Bluetooth.sharedInstance().autoEnableNotifications = true
         Bluetooth.sharedInstance().bluetoothDelegate = self
@@ -132,6 +132,15 @@ public class IDS : NSObject {
     func parseIDSStatusReaderControlPointCharacteristic(data: NSData) {
         print("parseIDSStatusReaderControlPointCharacteristic")
         IDSStatusReaderControlPoint.sharedInstance().parseIDSStatusReaderControlPointResponse(data: data)
+    }
+    
+    func parseRACPCharacteristic(data: NSData) {
+        IDSRecordAccessControlPoint.sharedInstance().parseRACPReponse(data: data)
+    }
+    
+    func parseHistoryCharacteristic(data: NSData) {
+        let historyEvent = IDSHistoryEvent(data: data)
+        self.historyEvents.append(historyEvent)
     }
     
     func parseIDSCommandDataCharacteristic(data: NSData) {
@@ -187,10 +196,8 @@ public class IDS : NSObject {
 
 extension IDS: BluetoothProtocol {
     public func scanForIDSDevices() {
-        Bluetooth.sharedInstance().startScanning(self.allowDuplicates)
-        
         if(self.allowedToScanForPeripherals) {
-            Bluetooth.sharedInstance().startScanning(self.allowDuplicates)
+            Bluetooth.sharedInstance().startScanning(self.allowDuplicates, serviceUUIDString: "1829")
         }
     }
     
@@ -200,7 +207,7 @@ extension IDS: BluetoothProtocol {
         if let peripheral = self.peripheral {
             Bluetooth.sharedInstance().connectPeripheral(peripheral)
         } else {
-            Bluetooth.sharedInstance().startScanning(self.allowDuplicates)
+            Bluetooth.sharedInstance().startScanning(self.allowDuplicates, serviceUUIDString: "1829")
         }
     }
     
@@ -319,6 +326,12 @@ extension IDS: BluetoothCharacteristicProtocol {
             if(crcIsValid(data: characteristic.value! as NSData)) {
                 self.parseIDSCommandControlPointCharacteristic(data: characteristic.value! as NSData)
             }
+        }
+        if(characteristic.uuid.uuidString == recordAccessControlPointCharacteristic) {
+            self.parseRACPCharacteristic(data: characteristic.value! as NSData)
+        }
+        if(characteristic.uuid.uuidString == idsHistoryDataCharacteristic) {
+            self.parseHistoryCharacteristic(data: characteristic.value! as NSData)
         }
         if(characteristic.uuid.uuidString == batteryLevelCharacteristic) {
             idsBatteryDelete?.IDSBatteryLevel(level: characteristic.value![0])

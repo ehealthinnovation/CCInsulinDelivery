@@ -12,8 +12,14 @@ import CCBluetooth
 
 var thisIDSRecordAccessControlPoint : IDSRecordAccessControlPoint?
 
+@objc public protocol IDSRACPProtocol {
+    func numberOfAllStoredRecords(number: UInt32)
+    func recordsReportedSuccessfully()
+}
+
 public class IDSRecordAccessControlPoint: NSObject {
     public var peripheral: CBPeripheral?
+    public var idsRACPDelegate : IDSRACPProtocol?
     
     @objc public enum RecordAccessControlPointOpCodes: UInt8 {
         case responseCode = 0x0F,
@@ -54,6 +60,28 @@ public class IDSRecordAccessControlPoint: NSObject {
     
     func parseRACPReponse(data:NSData) {
         print("parsing RACP response: \(data)")
+        let opCode: UInt8 = (data.subdata(with: NSRange(location:0, length: 1)) as NSData).decode()
+        if opCode == RecordAccessControlPointOpCodes.responseCode.rawValue {
+            self.parseResponseCode(data: data)
+        }
+        if opCode == RecordAccessControlPointOpCodes.numberOfStoredRecordsResponse.rawValue {
+            let numberOfRecords: UInt32 = (data.subdata(with: NSRange(location:3, length: 4)) as NSData).decode()
+            idsRACPDelegate?.numberOfAllStoredRecords(number: numberOfRecords)
+        }
+    }
+    
+    func parseResponseCode(data: NSData) {
+        let requestOpCode: UInt8 = (data.subdata(with: NSRange(location:1, length: 1)) as NSData).decode()
+        
+        switch requestOpCode {
+            case RecordAccessControlPointOpCodes.reportStoredRecords.rawValue:
+                let responseCodeValue: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
+                if responseCodeValue == RecordAccessControlPointResponseCodes.success.rawValue {
+                    idsRACPDelegate?.recordsReportedSuccessfully()
+                }
+            default:
+                ()
+        }
     }
     
     func parseRecord(data:NSData) {
@@ -68,6 +96,8 @@ public class IDSRecordAccessControlPoint: NSObject {
                                            0x00] as [UInt8], length: 4)
         let crc: NSData = (packet.crcMCRF4XX)
         packet.append(crc as Data)
+        
+        IDS.sharedInstance().historyEvents.removeAll()
         
         if let peripheral = self.peripheral {
             Bluetooth.sharedInstance().writeCharacteristic((peripheral.findCharacteristicByUUID(recordAccessControlPointCharacteristic)!), data: packet as Data)

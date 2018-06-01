@@ -32,14 +32,6 @@ public class IDSStatusReaderControlPoint: NSObject {
     public var resetResponseCode: UInt8 = 0
     public var activeBolusIDS: Array<UInt16> = Array<UInt16>()
     
-    /*
-    public var bolusDelayTimePresent:Bool = false
-    public var bolusTemplateNumberPresent:Bool = false
-    public var bolusActivationTypePresent:Bool = false
-    public var bolusDeliveryReasonCorrection:Bool = false
-    public var bolusDeliveryReasonMeal:Bool = false
-    */
-    
     public var activeBolusDeliveries = [ActiveBolusDelivery]()
     
     public var bolusDelayTimePresentBit = 0
@@ -47,18 +39,6 @@ public class IDSStatusReaderControlPoint: NSObject {
     public var bolusActivationTypePresentBit = 2
     public var bolusDeliveryReasonCorrectionBit = 3
     public var bolusDeliveryReasonMealBit = 4
-    
-    /*public class TotalDailyInsulinDeliveredStatus: Codable {
-        let sumOfBolusDelivered: String
-        let sumOfBasalDelivered: String
-        let sumOfBolusAndBasalDelivered: String?
-        
-        init(sumOfBolusDelivered: String, sumOfBasalDelivered: String, sumOfBolusAndBasalDelivered: String?) {
-            self.sumOfBolusDelivered = sumOfBolusDelivered
-            self.sumOfBasalDelivered = sumOfBasalDelivered
-            self.sumOfBolusAndBasalDelivered = sumOfBolusAndBasalDelivered
-        }
-    }*/
     
     @objc public enum StatusReaderOpCodes: UInt16 {
         case responseCode = 0x0303,
@@ -278,7 +258,6 @@ public class IDSStatusReaderControlPoint: NSObject {
         print("parseIDSStatusReaderControlPointResponse")
         
         let opCode: UInt16 = (data.subdata(with: NSRange(location:0, length: 2)) as NSData).decode()
-        //let opCode: UInt16 = (opCodeBytes?.decode())!
             switch opCode {
             case StatusReaderOpCodes.responseCode.rawValue:
                 self.parseResponseCodeOpCode(data: data)
@@ -310,7 +289,6 @@ public class IDSStatusReaderControlPoint: NSObject {
                 let response: UInt8 = (data.subdata(with: NSRange(location:4, length: 1)) as NSData).decode()
                 idsStatusReaderControlPointDelegate?.resetStatusUpdated(responseCode: response)
             case Int(StatusReaderOpCodes.getActiveBolusIds.rawValue):
-                //print("get_active_bolus_ids error")
                 idsStatusReaderControlPointDelegate?.statusReaderResponseCode(code: UInt16(opCode), error: operand)
             case Int(StatusReaderOpCodes.getActiveBolusDelivery.rawValue):
                 print("get_active_bolus_delivery error")
@@ -366,20 +344,15 @@ public class IDSStatusReaderControlPoint: NSObject {
                                            bolusActivationType: BolusActivationType(rawValue: activation)!.description)
         
         print(bolusDeliveryDetails)
-        
-        //addActiveBolusDelivery(delivery: bolusDeliveryDetails)
         idsStatusReaderControlPointDelegate?.bolusActiveDelivery(bolusDelivery: bolusDeliveryDetails)
     }
     
-    // add for now, need to support updating later
     func addActiveBolusDelivery(delivery: ActiveBolusDelivery) {
         for bolusDelivery in activeBolusDeliveries {
             if bolusDelivery.bolusID == delivery.bolusID {
                 return
             }
         }
-        
-        //if the bolus id is not in the array, add it
         activeBolusDeliveries.append(delivery)
     }
     
@@ -394,8 +367,6 @@ public class IDSStatusReaderControlPoint: NSObject {
     
     func parseGetActiveBasalRateDeliveryResponse(data: NSData) {
         let flags: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
-        //let flagBits: UInt8 = self.decode(data: flags!)
-        
         let activeBasalRateProfileTemplateNumber: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData).decode()
         let currentConfigValue: Float  = (data.subdata(with: NSRange(location:4, length: 2)) as NSData).shortFloatToFloat()
         let tbrType: UInt8 = (data.subdata(with: NSRange(location:6, length: 1)) as NSData).decode()
@@ -423,16 +394,11 @@ public class IDSStatusReaderControlPoint: NSObject {
         print("IDSStatusReaderControlPoint#parseGetTotalDailyInsulinStatus")
         
         let sumOfBolusDelivered: Float = (data.subdata(with: NSRange(location:2, length: 2)) as NSData).shortFloatToFloat()
-        //let sumOfBolusDelivered: Float = (sumOfBolusDeliveredBytes?.shortFloatToFloat())!
-        
         let sumOfBasalDelivered: Float = (data.subdata(with: NSRange(location:4, length: 2)) as NSData).shortFloatToFloat()
-        //let sumOfBasalDelivered: Float = (sumOfBasalDeliveredBytes?.shortFloatToFloat())!
-        
         let totalDailyDelivery = TotalDailyInsulinDeliveredStatus(totalDailyInsulinSumOfBolusDelivered: sumOfBolusDelivered,
                                                                   totalDailyInsulinSumOfBasalDelivered: sumOfBasalDelivered)
     
         print(totalDailyDelivery)
-        
         idsStatusReaderControlPointDelegate?.totalDailyInsulinDeliveredStatus(status: totalDailyDelivery)
     }
     
@@ -440,14 +406,9 @@ public class IDSStatusReaderControlPoint: NSObject {
         print("parseGetCounter")
         
         let counterType: UInt8 = (data.subdata(with: NSRange(location:2, length: 1)) as NSData).decode()
-        //let counterType: UInt8 = (counterTypeByte?.decode())!
-        
         let counterValueSelection: UInt8 = (data.subdata(with: NSRange(location:3, length: 1)) as NSData).decode()
-        //let counterValueSelection: UInt8 = (counterValueSelectionByte?.decode())!
-        
         let counterValueBytes = (data.subdata(with: NSRange(location:4, length: 4)) as NSData).swapUInt32Data()
         let counterValue: Int32 = counterValueBytes.decode()
-        
         let counter = Counter(counterType: counterType.description,
                               counterValueSelection: counterValueSelection.description,
                               counterValue: counterValue)
@@ -476,13 +437,10 @@ public class IDSStatusReaderControlPoint: NSObject {
         idsStatusReaderControlPointDelegate?.insulinOnBoard(insulinAmount: insulin)
     }
     
-    //pg 108
     public func resetSensorStatus() {
         print("IDSStatusReaderControlPoint#resetStatus")
         
         let opCode: UInt16 = StatusReaderOpCodes.resetStatus.rawValue
-        
-        //op code, reset all bits (0xFF) , crc counter (0x00)
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            0xFF, //reset all status bits
@@ -499,8 +457,6 @@ public class IDSStatusReaderControlPoint: NSObject {
     public func getActiveBolusIDs() {
         activeBolusIDS.removeAll()
         let opCode: UInt16 = StatusReaderOpCodes.getActiveBolusIds.rawValue
-        
-        //op code, no operand , crc counter (0x00)
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            0x00] as [UInt8], length: 3)
@@ -514,8 +470,6 @@ public class IDSStatusReaderControlPoint: NSObject {
     
     public func getActiveBolusDelivery(bolusID: UInt16) {
         let opCode: UInt16 = StatusReaderOpCodes.getActiveBolusDelivery.rawValue
-        
-        //op code (2 bytes), bolus id (2 bytes), value [programmed] (1 byte), crc counter (1 byte), crc (2 bytes)
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            UInt8(bolusID & 0xff),

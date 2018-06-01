@@ -6,10 +6,6 @@
 //  Copyright © 2018 CocoaPods. All rights reserved.
 //
 
-//TO-DO: fix deviceCoding type on BGM,CGM
-//       dialog to enter IU and duration on the session screen
-//       PRIVATE THE REPOS!
-
 import Foundation
 import UIKit
 import CCInsulinDelivery
@@ -28,6 +24,8 @@ class SessionViewController: UIViewController, UICircularProgressRingDelegate {
     @IBOutlet weak var manufacturerName: UILabel!
     @IBOutlet weak var modelNumber: UILabel!
     @IBOutlet weak var deviceFHIRID: UILabel!
+    @IBOutlet weak var deliveryingInsulinLabel: UILabel!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
     var insulinRemaining: Float = 180
     var medicationRequest: MedicationRequest?
@@ -40,20 +38,22 @@ class SessionViewController: UIViewController, UICircularProgressRingDelegate {
         var isFinished: Bool?
         var administrationAmount: Float
         var deliveredAmount: Float
-        var duration: Float
+        var duration: Int
         var medicationRequestID: Int?
         
-        init(bolusID: UInt16?, inProgress: Bool?, isFinished: Bool?, administrationAmount: Float, deliveredAmount: Float, duration: Float, medicationRequestID: Int?) {
+        init(bolusID: UInt16?, inProgress: Bool?, isFinished: Bool?, administrationAmount: Float, deliveredAmount: Float, duration: Int, medicationRequestID: Int?) {
             self.bolusID = bolusID
             self.inProgress = inProgress
             self.isFinished = isFinished
-            self.administrationAmount = Float(Double(administrationAmount).rounded(toPlaces: 2))  //roundf(administrationAmount * 100) / 100
+            self.administrationAmount = administrationAmount
             self.deliveredAmount = deliveredAmount
             self.duration = duration
             self.medicationRequestID = medicationRequestID
         }
     }
     var bolusDelivery: activeBolusDelivery?
+    var administrationAmountStr: String = ""
+    var deliveredAmountStr: String = ""
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -69,8 +69,8 @@ class SessionViewController: UIViewController, UICircularProgressRingDelegate {
     }
     
     override func viewDidAppear(_ animated: Bool) {
-        //patientFirstName.text = IDSFhir.IDSFhirInstance.patient?.name?.first?.given?.first?.description
-        //patientLastName.text = IDSFhir.IDSFhirInstance.patient?.name?.last?.family?.description
+        deliveryingInsulinLabel.isHidden = true
+        activityIndicator.isHidden = true
         patientFirstName.text = IDSFhir.IDSFhirInstance.givenName.description
         patientLastName.text = IDSFhir.IDSFhirInstance.familyName.description
         patientFHIRID.text = IDSFhir.IDSFhirInstance.patient?.id?.description
@@ -88,70 +88,107 @@ class SessionViewController: UIViewController, UICircularProgressRingDelegate {
     }
     
     @IBAction func fastBolusButtonAction(_ sender: Any) {
-        if insulinRemaining <= 2.1 {
-            showAlert(title: "Insufficient insulin for delivery", message: "")
-            return
-        }
-        
-        buttonsEnabled(enabled: false)
-        
-        self.bolusDelivery = activeBolusDelivery(bolusID: nil, inProgress: false, isFinished: false, administrationAmount:2.1, deliveredAmount:0, duration: 0, medicationRequestID: nil)
-        let date = Date()
-        if IDSFhir.IDSFhirInstance.patient != nil {
-            IDSFhir.IDSFhirInstance.createMedicationRequest(amount: 2.1, duration: 0, onDate: date) { (medicationRequest, error) -> Void in
-                if let error = error {
-                    print("error creating medication request: \(error)")
-                    self.showAlert(title: "FHIR Error", message: "error creating medication request")
+        inputInsulinAmount(message: "Input insulin amount", extended: false) { (amount, duration) -> Void in
+            if let amount = amount {
+                print("AMOUNT: \(amount)")
+                
+                if amount == 0.0 {
+                    self.showAlert(title: "Must provide an insulin amount larger than zero", message: "")
+                    return
                 }
                 
-                if error == nil {
-                    print("medication request created with id: \(medicationRequest.id!)")
-                    self.bolusDelivery?.medicationRequestID = Int((medicationRequest.id?.description)!)
+                if self.insulinRemaining < amount {
+                    self.showAlert(title: "Insufficient insulin for delivery", message: "")
+                    return
                 }
+                self.buttonsEnabled(enabled: false)
+            
+                self.bolusDelivery = activeBolusDelivery(bolusID: nil, inProgress: false, isFinished: false, administrationAmount:amount, deliveredAmount:0, duration: 0, medicationRequestID: nil)
+                self.administrationAmountStr = String(format: "%.1f", (self.bolusDelivery?.administrationAmount)!)
+                
+                let date = Date()
+                if IDSFhir.IDSFhirInstance.patient != nil {
+                    IDSFhir.IDSFhirInstance.createMedicationRequest(amount: amount, duration: 0, onDate: date) { (medicationRequest, error) -> Void in
+                        if let error = error {
+                            print("error creating medication request: \(error)")
+                            self.showAlert(title: "FHIR Error", message: "error creating medication request")
+                        }
+                        
+                        if error == nil {
+                            print("medication request created with id: \(medicationRequest.id!)")
+                            self.bolusDelivery?.medicationRequestID = Int((medicationRequest.id?.description)!)
+                        }
+                    }
+                }
+                
+                IDSCommandControlPoint.sharedInstance().setBolus(fastAmount: amount,
+                                                                 extendedAmount: 0,
+                                                                 duration: 0,
+                                                                 delayTime: 0,
+                                                                 templateNumber: 0,
+                                                                 activationType: 0,
+                                                                 bolusDeliveryReasonCorrection: false,
+                                                                 bolusDeliveryReasonMeal: false)
+                self.deliveryingInsulinLabel.isHidden = false
+                self.activityIndicator.isHidden = false
+                self.activityIndicator.startAnimating()
+            
             }
         }
-        
-        IDSCommandControlPoint.sharedInstance().setBolus(fastAmount: 2.1,
-                                                         extendedAmount: 0,
-                                                         duration: 0,
-                                                         delayTime: 0,
-                                                         templateNumber: 0,
-                                                         activationType: 0,
-                                                         bolusDeliveryReasonCorrection: false,
-                                                         bolusDeliveryReasonMeal: false)
     }
     
     @IBAction func extendedBolusButtonAction(_ sender: Any) {
-        if insulinRemaining <= 5.0 {
-            showAlert(title: "Insufficient insulin for delivery", message: "")
-            return
-        }
-        
-        buttonsEnabled(enabled: false)
-        
-        self.bolusDelivery = activeBolusDelivery(bolusID: nil, inProgress: false, isFinished: false, administrationAmount:5.0, deliveredAmount:0, duration: 5, medicationRequestID: nil)
-        let date = Date()
-        if IDSFhir.IDSFhirInstance.patient != nil {
-            IDSFhir.IDSFhirInstance.createMedicationRequest(amount: 5.0, duration: 30, onDate: date) { (medicationRequest, error) -> Void in
-                if let error = error {
-                    print("error creating medication request: \(error)")
-                    self.showAlert(title: "FHIR Error", message: "error creating medication request")
+        inputInsulinAmount(message: "Input insulin amount and duration", extended: true) { (amount, duration) -> Void in
+            if let amount = amount {
+                print("AMOUNT: \(amount)")
+                if amount == 0.0 {
+                    self.showAlert(title: "Must provide an insulin amount larger than zero", message: "")
+                    return
                 }
-                
-                if error == nil {
-                    print("medication request created with id: \(medicationRequest.id!)")
-                    self.bolusDelivery?.medicationRequestID = Int((medicationRequest.id?.description)!)
+                if let duration = duration {
+                    print("DURATION: \(duration)")
+                    if duration == 0 {
+                        self.showAlert(title: "Must provide a duration larger than zero", message: "")
+                        return
+                    }
+                    if self.insulinRemaining < amount {
+                        self.showAlert(title: "Insufficient insulin for delivery", message: "")
+                        return
+                    }
+                    self.buttonsEnabled(enabled: false)
+                    
+                    self.bolusDelivery = activeBolusDelivery(bolusID: nil, inProgress: false, isFinished: false, administrationAmount:amount, deliveredAmount:0, duration: duration, medicationRequestID: nil)
+                    self.administrationAmountStr = String(format: "%.1f", (self.bolusDelivery?.administrationAmount)!)
+                    
+                    let date = Date()
+                    if IDSFhir.IDSFhirInstance.patient != nil {
+                        IDSFhir.IDSFhirInstance.createMedicationRequest(amount: amount, duration: duration, onDate: date) { (medicationRequest, error) -> Void in
+                            if let error = error {
+                                print("error creating medication request: \(error)")
+                                self.showAlert(title: "FHIR Error", message: "error creating medication request")
+                            }
+                            
+                            if error == nil {
+                                print("medication request created with id: \(medicationRequest.id!)")
+                                self.bolusDelivery?.medicationRequestID = Int((medicationRequest.id?.description)!)
+                            }
+                        }
+                    }
+                    IDSCommandControlPoint.sharedInstance().setBolus(fastAmount: 0,
+                                                                     extendedAmount: amount,
+                                                                     duration: UInt16(duration),
+                                                                     delayTime: 0,
+                                                                     templateNumber: 0,
+                                                                     activationType: 0,
+                                                                     bolusDeliveryReasonCorrection: false,
+                                                                     bolusDeliveryReasonMeal: false)
+                    
+                    self.deliveryingInsulinLabel.isHidden = false
+                    self.activityIndicator.isHidden = false
+                    self.activityIndicator.startAnimating()
                 }
             }
         }
-        IDSCommandControlPoint.sharedInstance().setBolus(fastAmount: 0,
-                                                         extendedAmount: 5.0,
-                                                         duration: 5,
-                                                         delayTime: 0,
-                                                         templateNumber: 0,
-                                                         activationType: 0,
-                                                         bolusDeliveryReasonCorrection: false,
-                                                         bolusDeliveryReasonMeal: false)
     }
 
     func buttonsEnabled(enabled: Bool) {
@@ -167,6 +204,34 @@ class SessionViewController: UIViewController, UICircularProgressRingDelegate {
             extendedBolusButton.alpha = 0.5
         }
     }
+    
+    func inputInsulinAmount(message: String, extended: Bool, completion: @escaping (_ value: Float?, _ duration: Int?)->Void) {
+        let alert = UIAlertController(title: "Insulin", message: message, preferredStyle: .alert)
+        
+        alert.addTextField { (amountTextField) in
+            amountTextField.text = ""
+            amountTextField.placeholder = "Amount (IU)"
+            amountTextField.keyboardType = UIKeyboardType.decimalPad
+        }
+        if(extended) {
+            alert.addTextField { (durationTextField) in
+                durationTextField.text = ""
+                durationTextField.placeholder = "Duration (Minutes)"
+                durationTextField.keyboardType = UIKeyboardType.numberPad
+            }
+        }
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { void in
+            let amount = alert.textFields![0]
+            
+            if(extended) {
+                let duration = Int(alert.textFields![1].text!) ?? 0
+                completion(amount.text?.floatValue, duration)
+            } else {
+                completion(amount.text?.floatValue, 0)
+            }
+        }))
+        self.present(alert, animated: true, completion: nil)
+    }
 }
 
 extension SessionViewController: IDSProtocol {
@@ -175,57 +240,50 @@ extension SessionViewController: IDSProtocol {
     }
     
     func IDSStatusChanged(statusChanged: IDSStatusChanged) {
-        //var amount:Float = 0
-        
         if statusChanged.activeBolusStatusChanged == true {
             self.bolusDelivery?.inProgress = true
         }
         
-        //should this be in status, not status changed? track the previous insulin amount remaining and subtract the new value
-        /*if statusChanged.totalDailyInsulinStatusChanged! {
-            if self.bolusDelivery?.duration != 0 {
-                amount = (self.bolusDelivery?.administrationAmount)! / (self.bolusDelivery?.duration)!
-            } else {
-                amount = (self.bolusDelivery?.administrationAmount)!
-            }
-            self.bolusDelivery?.deliveredAmount += amount
-        }*/
-        
-        //print("delivered amount: \(String(describing: self.bolusDelivery?.deliveredAmount))")
         print("administration amount: \(String(describing: self.bolusDelivery?.administrationAmount))")
         print("in progress: \(String(describing: self.bolusDelivery?.inProgress))")
         print("insulin changed: \(String(describing: statusChanged.totalDailyInsulinStatusChanged ))")
-        
-        /*if (statusChanged.totalDailyInsulinStatusChanged == true && self.bolusDelivery?.inProgress == true && self.bolusDelivery?.deliveredAmount == self.bolusDelivery?.administrationAmount) {
-            self.bolusDelivery?.isFinished = true
-            print("BOLUS DELIVERY COMPLETE")
-            buttonsEnabled(enabled: true)
-        }*/
-        //IDS.sharedInstance().readStatus()
     }
     
     func IDSStatusUpdate(status: IDSStatus) {
         print("IDSStatusUpdate")
-        var insulinRemainingDifference: Float = self.insulinRemaining - status.reservoirRemainingAmount
-        insulinRemainingDifference = Float(Double(insulinRemainingDifference).rounded(toPlaces: 2))
-        self.bolusDelivery?.deliveredAmount += insulinRemainingDifference
-        print("delivered amount: \(String(describing: self.bolusDelivery?.deliveredAmount))")
         
-        insulinRemaining = status.reservoirRemainingAmount
-        insulinRemainingLabel.text = status.reservoirRemainingAmount.description
-        print("remaining amount: \(status.reservoirRemainingAmount.description)")
-        let percentRemaining: CGFloat = CGFloat(status.reservoirRemainingAmount / 180) * 100
-        insulinRemainingRing.setProgress(value: percentRemaining, animationDuration: 10, completion: nil)
+        if self.bolusDelivery?.inProgress == true {
+            if status.reservoirRemainingAmount < self.insulinRemaining {
+                var insulinRemainingDifference: Float = self.insulinRemaining - status.reservoirRemainingAmount
+                insulinRemainingDifference = Float(Double(insulinRemainingDifference).rounded(toPlaces: 1))
+                self.bolusDelivery?.deliveredAmount += insulinRemainingDifference
+                deliveredAmountStr = String(format: "%.1f", (self.bolusDelivery?.deliveredAmount)!)
+                print("delivered amount: \(deliveredAmountStr)")
+                
+                insulinRemaining = status.reservoirRemainingAmount
+                insulinRemainingLabel.text = status.reservoirRemainingAmount.description + " IU"
+                print("remaining amount: \(String(format: "%.1f", status.reservoirRemainingAmount))")
+                let percentRemaining: CGFloat = CGFloat(status.reservoirRemainingAmount / 180) * 100
+                insulinRemainingRing.setProgress(to: percentRemaining, duration: 5, completion: nil)
+            }
+        } else {
+            insulinRemaining = status.reservoirRemainingAmount
+            insulinRemainingLabel.text = status.reservoirRemainingAmount.description + " IU"
+            print("remaining amount: \(String(format: "%.1f", status.reservoirRemainingAmount))")
+            let percentRemaining: CGFloat = CGFloat(status.reservoirRemainingAmount / 180) * 100
+            insulinRemainingRing.setProgress(to: percentRemaining, duration: 5, completion: nil)
+        }
         
-        if (self.bolusDelivery?.inProgress == true && self.bolusDelivery?.deliveredAmount == self.bolusDelivery?.administrationAmount) {
+        if (self.bolusDelivery?.inProgress == true && deliveredAmountStr == administrationAmountStr) {
             self.bolusDelivery?.isFinished = true
-            print("BOLUS DELIVERY COMPLETE")
             buttonsEnabled(enabled: true)
-        
+            self.deliveryingInsulinLabel.isHidden = true
+            self.activityIndicator.isHidden = true
+            
             if IDSFhir.IDSFhirInstance.patient != nil {
-                if (self.bolusDelivery?.isFinished == true) { //} && self.bolusDelivery?.bolusID != nil) {
+                if (self.bolusDelivery?.isFinished == true) {
                     let date = Date()
-                    IDSFhir.IDSFhirInstance.createMedicationAdministration(administeredAmount: (self.bolusDelivery?.administrationAmount)!, onDate: date, prescriptionID: self.bolusDelivery?.medicationRequestID) { (medicationAdministration, error) -> Void in
+                    IDSFhir.IDSFhirInstance.createMedicationAdministration(administeredAmount: (self.bolusDelivery?.administrationAmount)!, duration: (self.bolusDelivery?.duration)!, onDate: date, prescriptionID: self.bolusDelivery?.medicationRequestID) { (medicationAdministration, error) -> Void in
                         if let error = error {
                             print("error creating medication administration: \(error)")
                             self.showAlert(title: "FHIR Error", message: "error creating medication administration")
@@ -244,8 +302,6 @@ extension SessionViewController: IDSProtocol {
     func IDSAnnunciationStatusUpdate(annunciation: IDSAnnunciationStatus) {
         ()
     }
-    
-    
 }
 
 extension SessionViewController: IDSBatteryProtocol {
@@ -374,10 +430,15 @@ extension SessionViewController: IDSCommandControlPointProtcol {
 }
 
 extension Double {
-    /// Rounds the double to decimal places value
     func rounded(toPlaces places:Int) -> Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor
+    }
+}
+
+extension String {
+    var floatValue: Float {
+        return (self as NSString).floatValue
     }
 }
 
