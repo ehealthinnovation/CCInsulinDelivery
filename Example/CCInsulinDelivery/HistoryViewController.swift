@@ -14,6 +14,7 @@ class HistoryViewController: UITableViewController {
     
     //MARK: - table source methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
         return IDS.sharedInstance().historyEvents.count
     }
     
@@ -27,17 +28,17 @@ class HistoryViewController: UITableViewController {
         let eventType: UInt16 = event.event
         switch eventType {
             case IDSDataTypes.EventType.basalRateProfileTemplateTimeBlockChanged.rawValue:
-                cell.detailTextLabel!.text = "Tap for details"
+                cell.detailTextLabel!.text = "Tap for details (Offset: \(event.offset) seconds)"
             case IDSDataTypes.EventType.tbrTemplateChanged.rawValue:
-                cell.detailTextLabel!.text = "Tap for details"
+                cell.detailTextLabel!.text = "Tap for details (Offset: \(event.offset) seconds)"
             case IDSDataTypes.EventType.isfProfileTemplateTimeBlockChanged.rawValue:
-                cell.detailTextLabel!.text = "Tap for details"
+                cell.detailTextLabel!.text = "Tap for details (Offset: \(event.offset) seconds)"
             case IDSDataTypes.EventType.i2choRatioProfileTemplateTimeBlockChanged.rawValue:
-                cell.detailTextLabel!.text = "Tap for details"
+                cell.detailTextLabel!.text = "Tap for details (Offset: \(event.offset) seconds)"
             case IDSDataTypes.EventType.targetGlucoseRangeProfileTemplateTimeBlockChanged.rawValue:
-                cell.detailTextLabel!.text = "Tap for details"
+                cell.detailTextLabel!.text = "Tap for details (Offset: \(event.offset) seconds)"
             default:
-                cell.detailTextLabel!.text = event.eventDescription
+                cell.detailTextLabel!.text = event.eventDescription + " " + "(Offset: \(event.offset) seconds)"
         }
         
         return cell

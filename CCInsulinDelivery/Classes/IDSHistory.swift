@@ -15,7 +15,7 @@ public class IDSHistoryEvent: NSObject {
     
     public var event: UInt16 = 0
     public var sequence: UInt32 = 0
-    public var offset: UInt32 = 0
+    public var offset: UInt16 = 0
     public var historyData: NSData!
     public var eventDescription: String!
     
@@ -88,6 +88,9 @@ public class IDSHistoryEvent: NSObject {
                 let lowerTargetGlucoseLimit: Float = (eventData.subdata(with: NSRange(location:4, length: 2)) as NSData).shortFloatToFloat()
                 let upperTargetGlucoseLimit: Float = (eventData.subdata(with: NSRange(location:6, length: 2)) as NSData).shortFloatToFloat()
                 return "Target glucose range template number: \(targetGlucoseRangeTemplateNumber)\nTime block number: \(timeBlockNumber)\nDuration: \(duration)\nLower target glucose limit: \(lowerTargetGlucoseLimit)\nUpper target glucose limit: \(upperTargetGlucoseLimit)"
+            case IDSDataTypes.EventType.reservoirRemainingAmountChanged.rawValue:
+                let reservoirRemainingAmount: Float = (eventData.subdata(with: NSRange(location:0, length: 2)) as NSData).shortFloatToFloat()
+                return ("Reservoir Remaining Amount: \(reservoirRemainingAmount)")
             default:
                 return ""
         }

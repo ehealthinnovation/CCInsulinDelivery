@@ -152,17 +152,12 @@ class DiscoveryViewController: UITableViewController, IDSDiscoveryProtocol, Refr
     }
     
     func getIPV4StringfromAddress(address: [Data]) -> String {
-        
         let data = address.first! as NSData
-        
         var values: [Int] = [0, 0, 0, 0]
-        
         for i in 0...3 {
             data.getBytes(&values[i], range: NSRange(location: i+4, length: 1))
         }
-        
         let ipStr = String(format: "%d.%d.%d.%d", values[0], values[1], values[2], values[3])
-        
         return ipStr
     }
     

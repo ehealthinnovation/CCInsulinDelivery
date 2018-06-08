@@ -142,7 +142,7 @@ public class IDSCommandControlPoint: NSObject {
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
                                            flags,
-                                           templateNumber, //Basal Rate Profile Template Number
+                                           templateNumber,
                                            0x01, //First Time Block Number Index
                                            UInt8(firstDuration & 0xff),
                                            UInt8(firstDuration >> 8),
@@ -226,7 +226,7 @@ public class IDSCommandControlPoint: NSObject {
         
         let packet = NSMutableData(bytes: [UInt8(opCode & 0xff),
                                            UInt8(opCode >> 8),
-                                           templateNumber, // TBR Template Number
+                                           templateNumber,
                                            UInt8(IDSDataTypes.TBRTypeValues.absolute.rawValue),
                                            UInt8(tbrAdjustmentValue & 0xff),
                                            UInt8(tbrAdjustmentValue >> 8),

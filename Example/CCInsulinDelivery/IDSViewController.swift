@@ -280,13 +280,13 @@ class IDSViewController: UITableViewController {
         
         for template in IDSCommandData.sharedInstance().templatesStatusAndDetails {
             if templateType == 0 {
-                let actionTitle = String(format: "Template Number: %d\nConfigurable: %@\nConfigured: %@", template.templateNumber, template.configurable.description, template.configured.description)
+                let actionTitle = String(format: "Template #: %d | Configurable: %@ | Configured: %@", template.templateNumber, template.configurable.description, template.configured.description)
                 let action = UIAlertAction(title: actionTitle,
                                            style: UIAlertActionStyle.default,
                                            handler: { void in completion(template.templateNumber)})
                 alertController.addAction(action)
             } else if template.templateType == templateType {
-                let actionTitle = String(format: "Template Number: %d\nConfigurable: %@\nConfigured: %@", template.templateNumber, template.configurable.description, template.configured.description)
+                let actionTitle = String(format: "Template #: %d | Configurable: %@ | Configured: %@", template.templateNumber, template.configurable.description, template.configured.description)
                 let action = UIAlertAction(title: actionTitle,
                                        style: UIAlertActionStyle.default,
                                        handler: { void in completion(template.templateNumber)})
