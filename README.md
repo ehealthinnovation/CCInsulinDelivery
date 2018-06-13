@@ -17,4 +17,4 @@ The FHIR server must advertise itself on the network to be discovered by the sam
 
 ## Author
 
-ktallevi, ktallevi@ehealthinnovation.org
+Kevin Tallevi, ktallevi@ehealthinnovation.org
